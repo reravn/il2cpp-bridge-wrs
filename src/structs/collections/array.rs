@@ -1,6 +1,6 @@
 //! IL2CPP Array definition and operations
 use crate::structs::core::Class;
-use crate::api::api;
+use crate::api;
 use std::ffi::c_void;
 use std::marker::PhantomData;
 

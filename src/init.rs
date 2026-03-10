@@ -1,13 +1,16 @@
 //! Initialization of the IL2CPP runtime and cache
-use crate::api::{api, cache, Thread};
-use crate::memory::info::symbol::resolve_symbol;
+use crate::api::{self, cache, Thread};
+use crate::memory::symbol::resolve_symbol;
 use std::ffi::c_void;
-use std::sync::Mutex;
+use std::sync::{Mutex, OnceLock};
 use std::thread;
 use std::time::Duration;
 
 #[cfg(dev_release)]
 use crate::logger;
+
+/// The target image name, set once during [`init()`](super::init).
+pub(crate) static TARGET_IMAGE_NAME: OnceLock<String> = OnceLock::new();
 
 type Callback = Box<dyn FnOnce() + Send + 'static>;
 
@@ -37,10 +40,16 @@ const CACHE_INIT_RETRY_DELAY: Duration = Duration::from_secs(3);
 ///
 /// # Arguments
 /// * `on_complete` - The callback to execute after successful initialization.
-pub fn init<F>(on_complete: F)
+pub fn init<F>(target_image: &str, on_complete: F)
 where
     F: FnOnce() + Send + 'static,
 {
+    TARGET_IMAGE_NAME
+        .set(target_image.to_owned())
+        .unwrap_or_else(|_| {
+            #[cfg(dev_release)]
+            logger::info("TARGET_IMAGE_NAME already set, ignoring new value.");
+        });
     let mut guard = STATE.lock().unwrap();
 
     match &mut *guard {
@@ -105,7 +114,7 @@ where
                         }
                     };
                     
-                    // cache::ensure_hydrated();
+                    cache::ensure_hydrated();
                     
                     std::thread::spawn(move || {
                         for cb in callbacks {

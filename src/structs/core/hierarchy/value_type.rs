@@ -1,7 +1,7 @@
 //! IL2CPP ValueType wrapper and operations
 use super::class::MethodSelector;
 use crate::structs::core::Method;
-use crate::api::{api, cache};
+use crate::api::{self, cache};
 use std::ffi::c_void;
 
 /// Represents an IL2CPP ValueType (struct) instance

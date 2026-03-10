@@ -1,5 +1,5 @@
 use crate::structs::core::Class;
-use crate::api::{api, cache, dump_assembly};
+use crate::api::{self, cache, dump_assembly};
 use crate::logger;
 use std::ffi::c_void;
 

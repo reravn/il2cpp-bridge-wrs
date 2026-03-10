@@ -1,5 +1,5 @@
 //! IL2CPP String definition and operations
-use crate::api::api;
+use crate::api;
 use std::os::raw::c_void;
 use std::slice;
 

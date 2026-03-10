@@ -1,6 +1,6 @@
 //! IL2CPP Field definition and functionality
 use crate::structs::core::{Class, Type, ValueType};
-use crate::api::api;
+use crate::api;
 use std::ffi::c_void;
 
 /// Represents an IL2CPP Field (a variable within a class or struct)

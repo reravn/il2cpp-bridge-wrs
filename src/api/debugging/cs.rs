@@ -75,8 +75,6 @@ fn get_dump_dir(base_path: Option<&str>) -> Option<PathBuf> {
 
 /// Dumps assemblies to separate files, or a single file if specified
 fn dump_assemblies_impl(base_path: Option<&str>, single_file_name: Option<&str>) -> Option<String> {
-    cache::ensure_hydrated();
-
     let dump_dir = get_dump_dir(base_path)?;
 
     #[cfg(dev_release)]

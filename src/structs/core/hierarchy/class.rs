@@ -1,6 +1,6 @@
 use crate::structs::collections::Il2cppArray;
 use crate::structs::core::{Field, Method, Property};
-use crate::api::{api, cache};
+use crate::api::{self, cache};
 use std::ffi::c_void;
 use std::sync::Arc;
 
@@ -481,7 +481,7 @@ impl Class {
     /// Retrieves the parent class by hydrating it from the parent pointer
     fn get_parent_class(&self) -> Option<Class> {
         unsafe {
-            let parent_ptr = crate::api::api::class_get_parent(self.address);
+            let parent_ptr = crate::api::class_get_parent(self.address);
             if parent_ptr.is_null() {
                 return None;
             }

@@ -1,8 +1,7 @@
 //! IL2CPP Method definition and functionality
 use crate::structs::collections::Il2cppArray;
 use crate::structs::core::{Class, Object, Type};
-use crate::api::core::caller::invoke_method;
-use crate::api::{api, cache};
+use crate::api::{self, cache, invoke_method};
 use std::ffi::c_void;
 use std::ptr;
 

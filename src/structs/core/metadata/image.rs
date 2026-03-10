@@ -1,6 +1,6 @@
 //! IL2CPP Image definition
 use crate::structs::core::Class;
-use crate::api::{api, cache};
+use crate::api::{self, cache};
 use std::ffi::c_void;
 
 use super::assembly::Assembly;

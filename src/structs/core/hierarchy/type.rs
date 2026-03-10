@@ -31,7 +31,7 @@ impl Type {
     /// # Returns
     /// * `*mut c_void` - Pointer to the System.Type object
     pub fn get_object(&self) -> *mut c_void {
-        unsafe { crate::api::api::type_get_object(self.address) }
+        unsafe { crate::api::type_get_object(self.address) }
     }
 
     /// Gets the Class definition for this type
@@ -39,7 +39,7 @@ impl Type {
     /// # Returns
     /// * `*mut c_void` - Pointer to the Class structure
     pub fn get_class(&self) -> *mut c_void {
-        unsafe { crate::api::api::class_from_type(self.address) }
+        unsafe { crate::api::class_from_type(self.address) }
     }
 
     /// Checks if two types are equal
@@ -50,7 +50,7 @@ impl Type {
     /// # Returns
     /// * `bool` - True if the types are equal
     pub fn equals(&self, other: &Type) -> bool {
-        unsafe { crate::api::api::type_equals(self.address, other.address) }
+        unsafe { crate::api::type_equals(self.address, other.address) }
     }
 
     /// Checks if the type is passed by reference
@@ -58,7 +58,7 @@ impl Type {
     /// # Returns
     /// * `bool` - True if the type is byref
     pub fn is_byref(&self) -> bool {
-        unsafe { crate::api::api::type_is_byref(self.address) }
+        unsafe { crate::api::type_is_byref(self.address) }
     }
 
     /// Gets the TypeEnum value
@@ -66,7 +66,7 @@ impl Type {
     /// # Returns
     /// * `i32` - The underlying enum value of the type
     pub fn get_type_enum(&self) -> i32 {
-        unsafe { crate::api::api::type_get_type(self.address) }
+        unsafe { crate::api::type_get_type(self.address) }
     }
 
     /// Gets the display name of the type for C# dump output.
@@ -89,10 +89,10 @@ impl Type {
         if !self.address.is_null() {
             unsafe {
                 let class_ptr =
-                    crate::api::api::class_from_type(self.address);
+                    crate::api::class_from_type(self.address);
                 if !class_ptr.is_null() {
                     let name_ptr =
-                        crate::api::api::class_get_name(class_ptr);
+                        crate::api::class_get_name(class_ptr);
                     if !name_ptr.is_null() {
                         let raw =
                             std::ffi::CStr::from_ptr(name_ptr).to_string_lossy();

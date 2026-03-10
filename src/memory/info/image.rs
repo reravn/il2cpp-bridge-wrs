@@ -13,7 +13,7 @@ pub fn get_image_base(name: &str) -> Option<usize> {
 
     let addr = platform::find_image_base(name)?;
     CACHE.insert(name.into(), addr);
-    Some(addr)
+    Some(addr) 
 }
 
 // macOS / iOS: iterate loaded dylibs via dyld to find the matching Mach-O header.

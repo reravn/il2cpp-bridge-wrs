@@ -12,7 +12,7 @@ use std::sync::Arc;
 static CLASSES_HYDRATED: AtomicBool = AtomicBool::new(false);
 
 use crate::structs::{Arg, Assembly, Class, Field, Image, Method, Property, Type};
-use crate::memory::info::image;
+use crate::memory::image;
 
 /// Caches IL2CPP assemblies, classes, and methods
 pub struct Il2CppCache {
@@ -509,7 +509,7 @@ unsafe fn archive_methods(
     full_class_name: &str,
 ) -> Result<(), String> {
     let image_base =
-        image::get_image_base(crate::config::TARGET_IMAGE_NAME).unwrap_or(0);
+        image::get_image_base(crate::init::TARGET_IMAGE_NAME.get().map(|s| s.as_str()).unwrap_or("")).unwrap_or(0);
 
     let mut iter = ptr::null_mut();
     loop {
@@ -677,7 +677,7 @@ pub fn method_from_ptr(method_ptr: *mut c_void) -> Option<Method> {
         let function_ptr = *(method_ptr as *const *mut c_void);
 
         let image_base =
-            image::get_image_base(crate::config::TARGET_IMAGE_NAME)
+            image::get_image_base(crate::init::TARGET_IMAGE_NAME.get().map(|s| s.as_str()).unwrap_or(""))
                 .unwrap_or(0);
         let mut rva = 0;
 

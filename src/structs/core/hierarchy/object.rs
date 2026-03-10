@@ -3,7 +3,7 @@ use super::class::MethodSelector;
 use crate::structs::components::GameObject;
 use crate::structs::core::{Class, Field, Method, Property};
 use crate::structs::Il2cppString;
-use crate::api::{api, cache};
+use crate::api::{self, cache};
 use std::ffi::c_void;
 
 /// Low-level IL2CPP Object structure (matches C layout)
