@@ -1,4 +1,8 @@
-# il2cpp-resolver-rs
+# il2cpp-bridge-rs
+
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Rust](https://img.shields.io/badge/rust-1.70%2B-orange.svg)](https://www.rust-lang.org)
+[![Platform](https://img.shields.io/badge/platform-iOS%20%7C%20macOS%20%7C%20Linux%20%7C%20Android%20%7C%20Windows-lightgrey.svg)](#platform-support)
 
 A high-performance Rust bridge to Unity's IL2CPP runtime. It resolves IL2CPP's exported C functions at runtime and wraps them in a safe, ergonomic API — letting you query types, invoke methods, and manipulate Unity objects directly from native code.
 
@@ -18,7 +22,7 @@ Built in Rust for maximum performance: zero-cost C FFI means no overhead on ever
 ## Quick Start
 
 ```bash
-cargo add il2cpp-resolver-rs
+cargo add il2cpp-bridge-rs
 ```
 
 The source code is well-structured and the best way to understand the full API — dig into `src/structs/` for type wrappers, `src/api/` for runtime bindings and caching, and `src/api/wrappers/` for real-world usage patterns.
@@ -54,6 +58,14 @@ See the [`docs/`](docs/) directory:
 - [Architecture](docs/architecture.md)
 - [API Reference](docs/api-reference.md)
 - [Platform Support](docs/platform-support.md)
+
+## Issues
+
+Found a bug or running into an error? [Open an issue](https://github.com/Batchhh/il2cpp-bridge-rs/issues/new/choose) — we have templates to help you provide the right details.
+
+## Contributing
+
+Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on reporting issues, submitting pull requests, and development setup.
 
 ## License
 

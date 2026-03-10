@@ -1,5 +1,5 @@
 [package]
-name = "il2cpp-resolver-rs"
+name = "il2cpp-bridge-rs"
 version = "0.1.0"
 edition = "2021"
 

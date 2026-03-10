@@ -3,7 +3,7 @@
 ## Installation
 
 ```bash
-cargo add il2cpp-resolver-rs
+cargo add il2cpp-bridge-rs
 ```
 
 ## Building
@@ -32,7 +32,7 @@ Call `init()` with the target image name and a callback. The library spawns a ba
 5. Fires your callback
 
 ```rust
-use il2cpp_resolver_rs::{init, api};
+use il2cpp_bridge_rs::{init, api};
 
 init("UnityFramework", || {
     println!("IL2CPP ready!");
@@ -46,7 +46,7 @@ Multiple calls to `init()` before completion queue callbacks. Calls after comple
 ## Looking Up Classes
 
 ```rust
-use il2cpp_resolver_rs::api::cache;
+use il2cpp_bridge_rs::api::cache;
 
 // Get Assembly-CSharp (most game code lives here)
 let asm = cache::csharp();
@@ -140,7 +140,7 @@ class.method(("TakeDamage", 1))
 For cases where you already have raw pointers:
 
 ```rust
-use il2cpp_resolver_rs::api::invoke_method;
+use il2cpp_bridge_rs::api::invoke_method;
 
 let result = invoke_method(method_ptr, obj_ptr, params_ptr);
 ```
@@ -176,7 +176,7 @@ if let Some(class) = asm.class("PlayerController") {
 You can also find a specific `GameObject` by name:
 
 ```rust
-use il2cpp_resolver_rs::structs::GameObject;
+use il2cpp_bridge_rs::structs::GameObject;
 
 if let Ok(go) = GameObject::find("Player") {
     println!("Found: {:?}", go);
@@ -186,7 +186,7 @@ if let Ok(go) = GameObject::find("Player") {
 ## Dumping Metadata
 
 ```rust
-use il2cpp_resolver_rs::api;
+use il2cpp_bridge_rs::api;
 
 // Dump a single assembly
 if let Some(text) = api::dump("Assembly-CSharp") {

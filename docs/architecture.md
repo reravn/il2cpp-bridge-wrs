@@ -3,7 +3,7 @@
 ## Module Overview
 
 ```
-il2cpp-resolver-rs
+il2cpp-bridge-rs
 ├── init            Entry point — spawns background thread, manages callbacks
 ├── api             IL2CPP runtime interface
 │   ├── core

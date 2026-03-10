@@ -1,4 +1,4 @@
-const TAG: &str = "il2cpp_resolver";
+const TAG: &str = "il2cpp_bridge";
 
 pub fn info(msg: &str) {
     eprintln!("[{}] [INFO] {}", TAG, msg);
