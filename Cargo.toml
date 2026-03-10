@@ -1,5 +1,5 @@
 [package]
-name = "il2cpp_resolver_rs"
+name = "il2cpp-resolver-rs"
 version = "0.1.0"
 edition = "2021"
 
