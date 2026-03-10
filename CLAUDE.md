@@ -23,7 +23,7 @@ Rust library crate for Unity IL2CPP runtime introspection. Cross-platform: macOS
 - **`init`** — Entry point. `init(on_complete)` spawns a background thread that loads IL2CPP symbols, attaches to the VM, initializes the cache with retries, then fires queued callbacks.
 - **`api`** — IL2CPP runtime interface. Contains FFI bindings, caching, thread management, method invocation, and debugging/SDK generation tools.
 - **`memory`** — Low-level memory operations: `rw` (generic ptr read/write), `info::symbol` (symbol resolution), `info::image` (loaded image base address lookup).
-- **`structs`** — Type wrappers mirroring Unity/IL2CPP: core hierarchy (Class, Object, Type), members (Field, Method, Property), metadata (Assembly, Image), collections (Array, List, Dictionary, String), components (GameObject, Transform, Camera, etc.), and math types.
+- **`structs`** — Type wrappers mirroring Unity/IL2CPP: core hierarchy (Class, Object, Type), members (Field, Method, Property), metadata (Assembly, Image), collections (Il2cppArray, Il2cppList, Il2cppDictionary, Il2cppString), components (GameObject, Transform, Camera, etc.), and math types.
 - **`config`** — `TARGET_IMAGE_NAME` constant used for RVA/VA calculations.
 - **`logger`** — Logging stubs, only active in debug builds via `#[cfg(dev_release)]`.
 
@@ -48,7 +48,7 @@ init::init(callback)
   → callback()
 ```
 
-At runtime, use `cache::assembly()` / `cache::class()` to look up types, then `caller::invoke_method()` for reflection-based calls with managed exception handling.
+At runtime, use `cache::assembly()` / `cache::class()` to look up types, then `Method::call<T>()` for type-safe invocation (or `Object::method()` for instance methods which auto-binds the instance). `api::invoke_method()` is the low-level raw-pointer alternative.
 
 ### Conditional Compilation
 
