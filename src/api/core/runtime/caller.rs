@@ -1,21 +1,17 @@
-//! IL2CPP Runtime invoker with exception handling
+//! Raw IL2CPP method invocation with managed exception handling.
 
 use super::super::api;
 use crate::structs::core::hierarchy::object::Object;
 use std::ffi::c_void;
 
-/// Invokes an IL2CPP method with exception handling
+/// Invokes an IL2CPP method using raw pointers.
 ///
-/// This function safely invokes an IL2CPP method via the runtime, catching any managed
-/// exceptions that occur during execution and converting them into a simplified string error.
+/// This is the low-level escape hatch behind
+/// [`crate::structs::Method::call`](crate::structs::Method::call). Prefer that
+/// higher-level API unless you already have raw `MethodInfo`, object, and
+/// parameter pointers.
 ///
-/// # Arguments
-/// * `method` - Pointer to the MethodInfo to invoke
-/// * `obj` - Pointer to the object instance (this pointer), or null for static methods
-/// * `params` - Array of pointers to the arguments
-///
-/// # Returns
-/// * `Result<*mut c_void, String>` - The return value as a raw pointer, or an error message if an exception occurred
+/// Managed exceptions are intercepted and returned as `Err(String)`.
 pub fn invoke_method(
     method: *mut c_void,
     obj: *mut c_void,

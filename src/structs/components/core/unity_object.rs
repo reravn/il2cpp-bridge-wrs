@@ -1,4 +1,4 @@
-//! Unity Object base wrapper
+//! Base wrapper for managed `UnityEngine.Object` values.
 use crate::api::cache;
 use crate::structs::components::Transform;
 use crate::structs::core::{Class, Il2cppObject, Object};
@@ -7,6 +7,10 @@ use crate::structs::Il2cppString;
 use std::ffi::c_void;
 use std::ops::Deref;
 
+/// Wrapper for a managed `UnityEngine.Object`.
+///
+/// This sits between the generic [`Object`] wrapper and more specific Unity
+/// types such as `GameObject`, `Component`, and `Transform`.
 #[repr(C)]
 #[derive(Debug, Clone, Copy)]
 pub struct UnityObject {
@@ -17,13 +21,7 @@ pub struct UnityObject {
 }
 
 impl UnityObject {
-    /// Creates a UnityObject from a raw pointer
-    ///
-    /// # Arguments
-    /// * `ptr` - The raw pointer to the object
-    ///
-    /// # Returns
-    /// * `Self` - The created UnityObject wrapper
+    /// Creates a `UnityObject` from a raw managed pointer.
     pub fn from_ptr(ptr: *mut c_void) -> Self {
         let object = unsafe { Object::from_ptr(ptr) };
         let m_cached_ptr = unsafe {
@@ -36,18 +34,12 @@ impl UnityObject {
         }
     }
 
-    /// Returns the raw pointer to the object
-    ///
-    /// # Returns
-    /// * `*mut c_void` - The raw pointer
+    /// Returns the raw managed pointer.
     pub fn as_ptr(&self) -> *mut c_void {
         self.object.as_ptr()
     }
 
-    /// Gets the name of the object
-    ///
-    /// # Returns
-    /// * `Result<String, String>` - The name of the object
+    /// Returns the Unity object name.
     pub fn get_name(&self) -> Result<String, String> {
         unsafe {
             let obj = Object::from_ptr(self.as_ptr());
@@ -66,10 +58,7 @@ impl UnityObject {
         }
     }
 
-    /// Returns the string representation of the object
-    ///
-    /// # Returns
-    /// * `Result<String, String>` - String representation
+    /// Returns the managed `ToString()` representation.
     pub fn to_string(&self) -> Result<String, String> {
         unsafe {
             let obj = Object::from_ptr(self.as_ptr());
@@ -87,21 +76,12 @@ impl UnityObject {
                 .ok_or_else(|| "Failed to convert String to String".to_string())
         }
     }
-    /// Gets the UnityObject class definition
-    ///
-    /// # Returns
-    /// * `Option<Class>` - The UnityEngine.Object class
+    /// Returns the cached `UnityEngine.Object` class definition.
     pub fn get_class() -> Option<Class> {
         cache::coremodule().class("Object")
     }
 
-    /// Instantiates a copy of the object
-    ///
-    /// # Arguments
-    /// * `original` - The object to clone
-    ///
-    /// # Returns
-    /// * `Result<UnityObject, String>` - The cloned object
+    /// Clones the given Unity object using `Object.Instantiate`.
     pub fn instantiate(original: &UnityObject) -> Result<UnityObject, String> {
         unsafe {
             let object_class = Self::get_class()
@@ -120,15 +100,7 @@ impl UnityObject {
         }
     }
 
-    /// Instantiates a copy of the object at position and rotation
-    ///
-    /// # Arguments
-    /// * `original` - The object to clone
-    /// * `position` - The position for the new object
-    /// * `rotation` - The rotation for the new object
-    ///
-    /// # Returns
-    /// * `Result<UnityObject, String>` - The cloned object
+    /// Clones the object at the given position and rotation.
     pub fn instantiate_at(
         original: &UnityObject,
         position: Vector3,
@@ -155,14 +127,7 @@ impl UnityObject {
         }
     }
 
-    /// Instantiates a copy of the object with parent
-    ///
-    /// # Arguments
-    /// * `original` - The object to clone
-    /// * `parent` - The parent Transform for the new object
-    ///
-    /// # Returns
-    /// * `Result<UnityObject, String>` - The cloned object
+    /// Clones the object and parents it under `parent`.
     pub fn instantiate_with_parent(
         original: &UnityObject,
         parent: &Transform,
@@ -184,13 +149,7 @@ impl UnityObject {
         }
     }
 
-    /// Destroys the object after a delay
-    ///
-    /// # Arguments
-    /// * `time_delay` - The time delay in seconds
-    ///
-    /// # Returns
-    /// * `Result<(), String>` - Ok if success
+    /// Schedules this object for destruction after `time_delay` seconds.
     pub fn destroy(&self, time_delay: f32) -> Result<(), String> {
         unsafe {
             let object_class = Self::get_class()
@@ -204,14 +163,7 @@ impl UnityObject {
         }
     }
 
-    /// Destroys the object immediately
-    ///
-    /// # Arguments
-    /// * `obj` - The object to destroy
-    /// * `allow_destroying_assets` - Whether to allow destroying assets
-    ///
-    /// # Returns
-    /// * `Result<(), String>` - Ok if success
+    /// Destroys the object immediately.
     pub fn destroy_immediate(
         obj: &UnityObject,
         allow_destroying_assets: bool,
@@ -231,13 +183,7 @@ impl UnityObject {
         }
     }
 
-    /// Preserves the object during scene loading
-    ///
-    /// # Arguments
-    /// * `obj` - The object to preserve
-    ///
-    /// # Returns
-    /// * `Result<(), String>` - Ok if success
+    /// Marks the object to survive scene loads.
     pub fn dont_destroy_on_load(obj: &UnityObject) -> Result<(), String> {
         unsafe {
             let object_class = Self::get_class()

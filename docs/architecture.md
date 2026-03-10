@@ -2,6 +2,8 @@
 
 This crate is intentionally layered so most users can stay in cache/object/wrapper APIs while contributors can reason about the lower-level runtime boundary.
 
+This page explains how the crate is organized. Use generated rustdoc for detailed API information on the public modules, structs, and methods referenced here.
+
 ## Layered View
 
 ```text
@@ -80,3 +82,5 @@ Wrappers under `api::wrappers` and `structs::components` exist to make common Un
 - `GameObject`, `Transform`, `MonoBehaviour`, and related types layer on top of `Object` and `Method`
 
 These wrappers should stay thin. If a behavior belongs to core runtime or metadata semantics, it should live in the lower layer first.
+
+When you need exact signatures or item-level semantics for any layer described above, consult rustdoc rather than this architecture overview.

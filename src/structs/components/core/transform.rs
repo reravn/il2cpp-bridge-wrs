@@ -1,5 +1,4 @@
-//! Unity Transform component wrapper
-// use crate::structs::core::{Il2cppObject, Object}; // Object is needed for valid calls
+//! Unity `Transform` wrapper.
 use crate::structs::core::{Il2cppObject, Object};
 use crate::structs::math::{Quaternion, Vector3};
 use std::ffi::c_void;
@@ -7,6 +6,7 @@ use std::ffi::c_void;
 use super::component::ComponentTrait;
 use super::game_object::GameObject;
 
+/// Wrapper for a managed `UnityEngine.Transform`.
 #[repr(transparent)]
 #[derive(Debug, Clone, Copy)]
 pub struct Transform {
@@ -23,29 +23,17 @@ impl ComponentTrait for Transform {
 }
 
 impl Transform {
-    /// Creates a Transform from a raw pointer
-    ///
-    /// # Arguments
-    /// * `ptr` - The raw pointer to the Transform
-    ///
-    /// # Returns
-    /// * `Self` - The created Transform wrapper
+    /// Creates a `Transform` from a raw managed pointer.
     pub unsafe fn from_ptr(ptr: *mut c_void) -> Self {
         <Self as ComponentTrait>::from_ptr(ptr)
     }
 
-    /// Returns the raw pointer to the transform
-    ///
-    /// # Returns
-    /// * `*mut c_void` - The raw pointer
+    /// Returns the raw managed pointer.
     pub fn as_ptr(&self) -> *mut c_void {
         self.ptr as *mut c_void
     }
 
-    /// Gets the GameObject attached to this Transform
-    ///
-    /// # Returns
-    /// * `Result<GameObject, String>` - The GameObject attached to this Transform
+    /// Returns the `GameObject` attached to this transform.
     pub fn get_game_object(&self) -> Result<GameObject, String> {
         unsafe {
             let obj = Object::from_ptr(self.as_ptr());
@@ -62,10 +50,7 @@ impl Transform {
         }
     }
 
-    /// Gets the world position of the transform
-    ///
-    /// # Returns
-    /// * `Result<Vector3, String>` - The world position
+    /// Returns the world position.
     pub fn get_position(&self) -> Result<Vector3, String> {
         unsafe {
             let obj = Object::from_ptr(self.as_ptr());
@@ -75,13 +60,7 @@ impl Transform {
         }
     }
 
-    /// Sets the world position of the transform
-    ///
-    /// # Arguments
-    /// * `value` - The new world position
-    ///
-    /// # Returns
-    /// * `Result<(), String>` - Ok if success
+    /// Sets the world position.
     pub fn set_position(&self, value: Vector3) -> Result<(), String> {
         unsafe {
             let obj = Object::from_ptr(self.as_ptr());
@@ -92,10 +71,7 @@ impl Transform {
         }
     }
 
-    /// Gets the local position of the transform
-    ///
-    /// # Returns
-    /// * `Result<Vector3, String>` - The local position concerning the parent
+    /// Returns the local position relative to the parent transform.
     pub fn local_position(&self) -> Result<Vector3, String> {
         unsafe {
             let obj = Object::from_ptr(self.as_ptr());
@@ -105,13 +81,7 @@ impl Transform {
         }
     }
 
-    /// Sets the local position of the transform
-    ///
-    /// # Arguments
-    /// * `value` - The new local position
-    ///
-    /// # Returns
-    /// * `Result<(), String>` - Ok if success
+    /// Sets the local position relative to the parent transform.
     pub fn set_local_position(&self, value: Vector3) -> Result<(), String> {
         unsafe {
             let obj = Object::from_ptr(self.as_ptr());
@@ -122,10 +92,7 @@ impl Transform {
         }
     }
 
-    /// Gets the world rotation of the transform
-    ///
-    /// # Returns
-    /// * `Result<Quaternion, String>` - The world rotation
+    /// Returns the world rotation.
     pub fn get_rotation(&self) -> Result<Quaternion, String> {
         unsafe {
             let obj = Object::from_ptr(self.as_ptr());
@@ -135,13 +102,7 @@ impl Transform {
         }
     }
 
-    /// Sets the world rotation of the transform
-    ///
-    /// # Arguments
-    /// * `value` - The new world rotation
-    ///
-    /// # Returns
-    /// * `Result<(), String>` - Ok if success
+    /// Sets the world rotation.
     pub fn set_rotation(&self, value: Quaternion) -> Result<(), String> {
         unsafe {
             let obj = Object::from_ptr(self.as_ptr());
@@ -152,10 +113,7 @@ impl Transform {
         }
     }
 
-    /// Gets the local rotation of the transform
-    ///
-    /// # Returns
-    /// * `Result<Quaternion, String>` - The local rotation relative to the parent
+    /// Returns the local rotation relative to the parent transform.
     pub fn local_rotation(&self) -> Result<Quaternion, String> {
         unsafe {
             let obj = Object::from_ptr(self.as_ptr());
@@ -165,13 +123,7 @@ impl Transform {
         }
     }
 
-    /// Sets the local rotation of the transform
-    ///
-    /// # Arguments
-    /// * `value` - The new local rotation
-    ///
-    /// # Returns
-    /// * `Result<(), String>` - Ok if success
+    /// Sets the local rotation relative to the parent transform.
     pub fn set_local_rotation(&self, value: Quaternion) -> Result<(), String> {
         unsafe {
             let obj = Object::from_ptr(self.as_ptr());
@@ -182,10 +134,7 @@ impl Transform {
         }
     }
 
-    /// Gets the local scale of the transform
-    ///
-    /// # Returns
-    /// * `Result<Vector3, String>` - The local scale
+    /// Returns the local scale.
     pub fn get_local_scale(&self) -> Result<Vector3, String> {
         unsafe {
             let obj = Object::from_ptr(self.as_ptr());
@@ -195,13 +144,7 @@ impl Transform {
         }
     }
 
-    /// Sets the local scale of the transform
-    ///
-    /// # Arguments
-    /// * `value` - The new local scale
-    ///
-    /// # Returns
-    /// * `Result<(), String>` - Ok if success
+    /// Sets the local scale.
     pub fn set_local_scale(&self, value: Vector3) -> Result<(), String> {
         unsafe {
             let obj = Object::from_ptr(self.as_ptr());
@@ -212,10 +155,7 @@ impl Transform {
         }
     }
 
-    /// Gets the lossy scale (global scale) of the transform
-    ///
-    /// # Returns
-    /// * `Result<Vector3, String>` - The global scale (approximate)
+    /// Returns the lossy world scale approximation.
     pub fn get_lossy_scale(&self) -> Result<Vector3, String> {
         unsafe {
             let obj = Object::from_ptr(self.as_ptr());
@@ -225,10 +165,7 @@ impl Transform {
         }
     }
 
-    /// Gets the number of children
-    ///
-    /// # Returns
-    /// * `i32` - The number of child transforms
+    /// Returns the number of direct child transforms.
     pub fn get_child_count(&self) -> i32 {
         unsafe {
             let obj = Object::from_ptr(self.as_ptr());
@@ -239,13 +176,7 @@ impl Transform {
         }
     }
 
-    /// Gets the child at the specified index
-    ///
-    /// # Arguments
-    /// * `index` - The index of the child to retrieve
-    ///
-    /// # Returns
-    /// * `Result<Transform, String>` - The child Transform
+    /// Returns the child transform at `index`.
     pub fn get_child(&self, index: i32) -> Result<Transform, String> {
         unsafe {
             let obj = Object::from_ptr(self.as_ptr());

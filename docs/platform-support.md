@@ -2,6 +2,8 @@
 
 This page collects the platform-specific details and runtime caveats that matter when integrating `il2cpp-bridge-rs` into a live Unity process.
 
+Use this page for environment guidance and failure analysis. Use generated rustdoc for detailed API information on the functions and types involved.
+
 ## Supported Targets
 
 | Platform | Target triple | Status |
@@ -110,3 +112,5 @@ The platform split in `Cargo.toml` is:
 - `windows-sys` on Windows
 
 Those dependencies are implementation details, but they matter when debugging platform-specific symbol or image-resolution issues.
+
+If you need the exact signatures for runtime helpers such as `init`, `Thread`, cache accessors, or dump functions, check rustdoc.

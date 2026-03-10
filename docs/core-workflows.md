@@ -2,6 +2,8 @@
 
 This page covers the workflows most adopters need after initialization: metadata lookup, method invocation, field and property access, Unity object access, and metadata dumping.
 
+Use this page for patterns and caveats. Use generated rustdoc for detailed API information on the types and functions mentioned here.
+
 ## Find Assemblies and Classes
 
 Start with the cache:
@@ -150,3 +152,5 @@ Most workflow failures come from one of these conditions:
 - the expected Rust return type does not match the managed return shape
 
 If you see one of those failure modes, resolve it before adding more wrapper code around the problem.
+
+For detailed API information on `Assembly`, `Class`, `Method`, `Object`, `GameObject`, and related types, refer to rustdoc rather than treating this guide as the reference layer.

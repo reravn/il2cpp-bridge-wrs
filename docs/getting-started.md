@@ -2,6 +2,8 @@
 
 This guide is for the first integration pass: loading the crate inside a process that already has Unity's IL2CPP runtime available, initializing the cache, and reaching the point where metadata lookups and method calls are reliable.
 
+Use this page for the workflow. Use generated rustdoc for detailed API information, exact signatures, and per-item behavior.
+
 ## 1. Add the Crate
 
 ```bash
@@ -142,3 +144,5 @@ After you can initialize reliably, the next pages to read are:
 - [Core Workflows](core-workflows.md)
 - [Platform and Runtime Notes](platform-support.md)
 - [API Map](api-reference.md)
+
+For detailed API information while following those guides, build and open rustdoc with `cargo doc --no-deps`.

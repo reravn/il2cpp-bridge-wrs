@@ -1,11 +1,13 @@
-//! IL2CPP Image definition
+//! Image metadata wrapper.
 use crate::api::{self, cache};
 use crate::structs::core::Class;
 use std::ffi::c_void;
 
 use super::assembly::Assembly;
 
-/// Represents an IL2CPP Image (essentially a DLL or executable module)
+/// Represents a hydrated IL2CPP image.
+///
+/// In Unity terms this is roughly the image or module backing an assembly.
 #[derive(Debug, Clone)]
 pub struct Image {
     /// Pointer to the internal IL2CPP image structure
@@ -24,10 +26,7 @@ unsafe impl Send for Image {}
 unsafe impl Sync for Image {}
 
 impl Image {
-    /// Gets the assembly corresponding to this image
-    ///
-    /// # Returns
-    /// * `Option<Arc<Assembly>>` - The assembly containing this image, or None if not found
+    /// Returns the assembly associated with this image, if it is cached.
     pub fn get_assembly(&self) -> Option<std::sync::Arc<Assembly>> {
         unsafe {
             let assembly_ptr = api::image_get_assembly(self.address);
@@ -44,10 +43,7 @@ impl Image {
         }
     }
 
-    /// Gets all classes defined in this image
-    ///
-    /// # Returns
-    /// * `Vec<Class>` - A list of all classes defined in this image
+    /// Returns all classes defined in this image.
     pub fn get_classes(&self) -> Vec<Class> {
         let mut classes = Vec::new();
         unsafe {
@@ -64,13 +60,11 @@ impl Image {
         classes
     }
 
-    /// Finds a class by name within this image
+    /// Finds a class by name within this image.
     ///
-    /// # Arguments
-    /// * `name` - The full name of the class (e.g., "UnityEngine.GameObject")
-    ///
-    /// # Returns
-    /// * `Option<Class>` - The found class, or None if not found
+    /// Accepts either a fully qualified type name such as
+    /// `UnityEngine.GameObject` or an unqualified name for the global
+    /// namespace.
     pub fn class(&self, name: &str) -> Option<Class> {
         if let Some(class) = cache::CACHE.classes.get(name) {
             return Some((**class).clone());

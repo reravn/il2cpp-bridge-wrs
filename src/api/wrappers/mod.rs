@@ -1,7 +1,7 @@
-//! Unity API Wrappers
+//! Small wrappers for selected Unity APIs.
 //!
-//! this module contains safe Rust wrappers for common Unity APIs like
-//! `Application`, `File`, `Directory`, and `Time`.
+//! These modules provide convenience accessors for common static Unity classes
+//! without changing the underlying runtime model used elsewhere in the crate.
 
 pub mod application;
 pub mod time;

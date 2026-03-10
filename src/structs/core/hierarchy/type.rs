@@ -1,7 +1,11 @@
-//! IL2CPP Type definition
+//! Type metadata wrapper.
 use std::ffi::c_void;
 
-/// Represents an IL2CPP Type definition
+/// Represents a hydrated IL2CPP type.
+///
+/// `Type` values usually come from fields, properties, method arguments, and
+/// return metadata. They are useful for comparison, reflection-style queries,
+/// and producing readable dump output.
 #[derive(Debug, Clone)]
 pub struct Type {
     /// Pointer to the internal IL2CPP type structure
@@ -26,50 +30,32 @@ unsafe impl Send for Type {}
 unsafe impl Sync for Type {}
 
 impl Type {
-    /// Gets the System.Type object corresponding to this type
-    ///
-    /// # Returns
-    /// * `*mut c_void` - Pointer to the System.Type object
+    /// Returns the managed `System.Type` object for this type.
     pub fn get_object(&self) -> *mut c_void {
         unsafe { crate::api::type_get_object(self.address) }
     }
 
-    /// Gets the Class definition for this type
-    ///
-    /// # Returns
-    /// * `*mut c_void` - Pointer to the Class structure
+    /// Returns the raw `Il2CppClass*` for this type.
     pub fn get_class(&self) -> *mut c_void {
         unsafe { crate::api::class_from_type(self.address) }
     }
 
-    /// Checks if two types are equal
-    ///
-    /// # Arguments
-    /// * `other` - The other type to compare with
-    ///
-    /// # Returns
-    /// * `bool` - True if the types are equal
+    /// Returns `true` when the two IL2CPP types are equal.
     pub fn equals(&self, other: &Type) -> bool {
         unsafe { crate::api::type_equals(self.address, other.address) }
     }
 
-    /// Checks if the type is passed by reference
-    ///
-    /// # Returns
-    /// * `bool` - True if the type is byref
+    /// Returns `true` if this type is passed by reference.
     pub fn is_byref(&self) -> bool {
         unsafe { crate::api::type_is_byref(self.address) }
     }
 
-    /// Gets the TypeEnum value
-    ///
-    /// # Returns
-    /// * `i32` - The underlying enum value of the type
+    /// Returns the underlying IL2CPP type enum value.
     pub fn get_type_enum(&self) -> i32 {
         unsafe { crate::api::type_get_type(self.address) }
     }
 
-    /// Gets the display name of the type for C# dump output.
+    /// Returns a readable C#-style display name for this type.
     ///
     /// Uses `class_from_type` to get the authoritative class name, then handles
     /// generic types by replacing type arguments with `T0, T1, ...` placeholders.

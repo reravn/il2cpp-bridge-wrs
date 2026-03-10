@@ -1,6 +1,7 @@
-//! Core component system definitions
+//! Fundamental Unity component wrappers.
 //!
-//! Contains the fundamental Unity types: Object, GameObject, Component, Transform, MonoBehaviour.
+//! This module contains the base types most Unity-facing workflows build on:
+//! `UnityObject`, `GameObject`, `Component`, `Transform`, and `MonoBehaviour`.
 pub mod component;
 pub mod game_object;
 pub mod mono_behaviour;

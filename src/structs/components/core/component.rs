@@ -1,4 +1,4 @@
-//! Unity Component wrapper and trait
+//! Unity `Component` wrapper and conversion trait.
 use super::game_object::GameObject;
 use super::transform::Transform;
 use super::unity_object::UnityObject;
@@ -6,6 +6,7 @@ use crate::structs::core::{Class, Il2cppObject};
 use std::ffi::c_void;
 use std::ops::Deref;
 
+/// Wrapper for a managed `UnityEngine.Component`.
 #[repr(C)]
 #[derive(Debug, Clone, Copy)]
 pub struct Component {
@@ -15,7 +16,9 @@ pub struct Component {
     pub m_cached_ptr: *mut c_void,
 }
 
+/// Trait implemented by Unity component wrappers that can be constructed from a raw pointer.
 pub trait ComponentTrait {
+    /// Creates the wrapper from a raw managed object pointer.
     fn from_ptr(ptr: *mut c_void) -> Self;
 }
 
@@ -34,29 +37,17 @@ impl ComponentTrait for Component {
 }
 
 impl Component {
-    /// Creates a Component from a raw pointer using the trait implementation
-    ///
-    /// # Arguments
-    /// * `ptr` - The raw pointer to the component
-    ///
-    /// # Returns
-    /// * `Self` - The created Component wrapper
+    /// Creates a `Component` wrapper from a raw pointer.
     pub fn from_ptr(ptr: *mut c_void) -> Self {
         <Self as ComponentTrait>::from_ptr(ptr)
     }
 
-    /// Returns the raw pointer to the component
-    ///
-    /// # Returns
-    /// * `*mut c_void` - The raw pointer
+    /// Returns the raw managed pointer.
     pub fn as_ptr(&self) -> *mut c_void {
         self.object.as_ptr()
     }
 
-    /// Gets the GameObject associated with this component
-    ///
-    /// # Returns
-    /// * `Result<GameObject, String>` - The GameObject attached to this component
+    /// Returns the `GameObject` attached to this component.
     pub fn get_game_object(&self) -> Result<GameObject, String> {
         unsafe {
             let ptr = self
@@ -72,10 +63,7 @@ impl Component {
         }
     }
 
-    /// Gets the Transform attached to this component
-    ///
-    /// # Returns
-    /// * `Result<Transform, String>` - The Transform attached to this component
+    /// Returns the `Transform` attached to this component.
     pub fn get_transform(&self) -> Result<Transform, String> {
         unsafe {
             let ptr = self
@@ -91,16 +79,7 @@ impl Component {
         }
     }
 
-    /// Gets a component of the specified class on the same GameObject
-    ///
-    /// # Type Parameters
-    /// * `T` - The type of component to retrieve (must implement ComponentTrait)
-    ///
-    /// # Arguments
-    /// * `class` - The IL2CPP class of the component
-    ///
-    /// # Returns
-    /// * `Result<T, String>` - The requested component, or error if not found
+    /// Resolves another component of the specified class on the same `GameObject`.
     pub fn get_component<T: ComponentTrait>(&self, class: &Class) -> Result<T, String> {
         if class.object.is_null() {
             return Err(format!(
