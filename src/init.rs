@@ -65,14 +65,24 @@ where
             drop(guard);
 
             std::thread::spawn(move || {
-                api::load(|symbol| match resolve_symbol(symbol) {
+                if let Err(missing) = api::load(|symbol| match resolve_symbol(symbol) {
                     Ok(addr) => addr as *mut c_void,
                     Err(_e) => {
                         #[cfg(dev_release)]
                         logger::error(&format!("{}", _e));
                         std::ptr::null_mut()
                     }
-                });
+                }) {
+                    #[cfg(dev_release)]
+                    logger::error(&format!(
+                        "Failed to load IL2CPP API symbols: {}",
+                        missing.join(", ")
+                    ));
+
+                    let mut guard = STATE.lock().unwrap();
+                    *guard = State::Idle;
+                    return;
+                }
 
                 #[cfg(dev_release)]
                 logger::info("IL2CPP API loaded, waiting for runtime...");
@@ -126,7 +136,7 @@ where
                     logger::error("Cache initialization failed after all retry attempts.");
 
                     let mut guard = STATE.lock().unwrap();
-                    *guard = State::Done;
+                    *guard = State::Idle;
                 }
             });
         }

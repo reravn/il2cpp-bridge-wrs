@@ -46,10 +46,9 @@ impl Collider {
     pub fn get_bounds(&self) -> Result<Bounds, String> {
         let mut bounds = Bounds::default();
         unsafe {
-            let _ = self
-                .method("get_bounds_Injected")
+            self.method("get_bounds_Injected")
                 .ok_or("Method 'get_bounds_Injected' not found")?
-                .call::<c_void>(&[&mut bounds as *mut Bounds as *mut c_void])?;
+                .call::<()>(&[&mut bounds as *mut Bounds as *mut c_void])?;
         }
         Ok(bounds)
     }
@@ -77,7 +76,7 @@ impl Collider {
             let mut value_cp = value;
             self.method("set_enabled")
                 .ok_or("Method 'set_enabled' not found")?
-                .call::<c_void>(&[&mut value_cp as *mut bool as *mut c_void])?;
+                .call::<()>(&[&mut value_cp as *mut bool as *mut c_void])?;
             Ok(())
         }
     }
@@ -106,7 +105,7 @@ impl Collider {
             let mut value_cp = value;
             self.method("set_isTrigger")
                 .ok_or("Method 'set_isTrigger' not found")?
-                .call::<c_void>(&[&mut value_cp as *mut bool as *mut c_void])?;
+                .call::<()>(&[&mut value_cp as *mut bool as *mut c_void])?;
             Ok(())
         }
     }

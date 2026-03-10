@@ -1,6 +1,6 @@
 //! IL2CPP ValueType wrapper and operations
 use super::class::MethodSelector;
-use crate::api::{self, cache};
+use crate::api::cache;
 use crate::structs::core::Method;
 use std::ffi::c_void;
 
@@ -56,8 +56,7 @@ impl ValueType {
         if self.ptr.is_null() {
             return std::mem::zeroed();
         }
-        let unboxed = api::object_unbox(self.ptr);
-        std::ptr::read(unboxed as *const T)
+        std::ptr::read(self.ptr as *const T)
     }
 
     /// Gets a field specific to this value type instance
@@ -68,11 +67,7 @@ impl ValueType {
     /// # Returns
     /// * `Option<crate::structs::core::field::Field>` - The field if found, or None
     pub fn field(&self, name: &str) -> Option<crate::structs::core::members::field::Field> {
-        let klass = if !self.class.is_null() {
-            self.class
-        } else {
-            unsafe { api::object_get_class(self.ptr) }
-        };
+        let klass = self.class;
 
         if klass.is_null() {
             return None;
@@ -101,24 +96,18 @@ impl ValueType {
     /// # Returns
     /// * `Option<Method>` - The found method, or None
     pub fn method<S: MethodSelector>(&self, selector: S) -> Option<Method> {
-        unsafe {
-            let klass = if !self.class.is_null() {
-                self.class
-            } else {
-                api::object_get_class(self.ptr)
-            };
+        let klass = self.class;
 
-            if klass.is_null() {
-                return None;
-            }
-
-            cache::class_from_ptr(klass).and_then(|class| {
-                class.method(selector).map(|mut method| {
-                    method.instance = Some(self.as_ptr());
-                    method
-                })
-            })
+        if klass.is_null() {
+            return None;
         }
+
+        cache::class_from_ptr(klass).and_then(|class| {
+            class.method(selector).map(|mut method| {
+                method.instance = Some(self.as_ptr());
+                method
+            })
+        })
     }
 
     /// Gets a property specific to this value type instance
@@ -132,11 +121,7 @@ impl ValueType {
         &self,
         name: &str,
     ) -> Option<crate::structs::core::members::property::Property> {
-        let klass = if !self.class.is_null() {
-            self.class
-        } else {
-            unsafe { api::object_get_class(self.ptr) }
-        };
+        let klass = self.class;
 
         if klass.is_null() {
             return None;

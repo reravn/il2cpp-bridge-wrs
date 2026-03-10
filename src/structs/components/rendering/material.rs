@@ -57,7 +57,7 @@ impl Material {
         unsafe {
             self.method(("set_color", 1))
                 .ok_or("Method 'set_color' not found")?
-                .call::<c_void>(&[&mut (color.clone()) as *mut Color as *mut c_void])?;
+                .call::<()>(&[&mut (color.clone()) as *mut Color as *mut c_void])?;
         }
         Ok(())
     }
@@ -75,7 +75,7 @@ impl Material {
             let string_new_ptr = Il2cppString::new(name);
             self.method(("SetColor", 2))
                 .ok_or("Method 'SetColor' not found")?
-                .call::<c_void>(&[
+                .call::<()>(&[
                     string_new_ptr as *mut c_void,
                     &mut (color.clone()) as *mut Color as *mut c_void,
                 ])?;
@@ -96,7 +96,7 @@ impl Material {
             let string_new_ptr = Il2cppString::new(name);
             self.method(("SetFloat", 2))
                 .ok_or("Method 'SetFloat' not found")?
-                .call::<c_void>(&[string_new_ptr as *mut c_void, &mut { value } as *mut f32
+                .call::<()>(&[string_new_ptr as *mut c_void, &mut { value } as *mut f32
                     as *mut c_void])?;
         }
         Ok(())
@@ -115,7 +115,7 @@ impl Material {
             let string_new_ptr = Il2cppString::new(name);
             self.method(("SetInt", 2))
                 .ok_or("Method 'SetInt' not found")?
-                .call::<c_void>(&[string_new_ptr as *mut c_void, &mut { value } as *mut i32
+                .call::<()>(&[string_new_ptr as *mut c_void, &mut { value } as *mut i32
                     as *mut c_void])?;
         }
         Ok(())
@@ -150,7 +150,7 @@ impl Material {
         unsafe {
             self.method(("set_shader", 1))
                 .ok_or("Method 'set_shader' not found")?
-                .call::<c_void>(&[shader.object.ptr as *mut c_void])?;
+                .call::<()>(&[shader.object.ptr as *mut c_void])?;
         }
         Ok(())
     }

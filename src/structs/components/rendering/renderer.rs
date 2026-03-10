@@ -36,10 +36,9 @@ impl Renderer {
     pub fn get_bounds(&self) -> Result<Bounds, String> {
         let mut bounds = Bounds::default();
         unsafe {
-            let _ = self
-                .method("get_bounds_Injected")
+            self.method("get_bounds_Injected")
                 .ok_or("Method 'get_bounds_Injected' not found")?
-                .call::<c_void>(&[&mut bounds as *mut Bounds as *mut c_void])?;
+                .call::<()>(&[&mut bounds as *mut Bounds as *mut c_void])?;
         }
         Ok(bounds)
     }
@@ -72,7 +71,7 @@ impl Renderer {
         unsafe {
             self.method(("set_material", 1))
                 .ok_or("Method 'set_material' not found")?
-                .call::<c_void>(&[material.object.ptr as *mut c_void])?;
+                .call::<()>(&[material.object.ptr as *mut c_void])?;
         }
         Ok(())
     }

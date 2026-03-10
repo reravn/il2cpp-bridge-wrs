@@ -107,7 +107,7 @@ impl Property {
     ///
     /// # Returns
     /// * `Result<T, String>` - The property value or an error
-    pub unsafe fn get_value<T>(&self) -> Result<T, String> {
+    pub unsafe fn get_value<T: Copy>(&self) -> Result<T, String> {
         let getter = self
             .getter
             .as_ref()

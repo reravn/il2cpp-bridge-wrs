@@ -272,7 +272,7 @@ impl SceneManager {
             .ok_or("Method 'LoadScene(int)' not found")?;
 
         unsafe {
-            method.call::<c_void>(&[&index as *const i32 as *mut c_void])?;
+            method.call::<()>(&[&index as *const i32 as *mut c_void])?;
         }
         Ok(())
     }
@@ -298,7 +298,7 @@ impl SceneManager {
         }
 
         unsafe {
-            method.call::<c_void>(&[name_str as *mut c_void])?;
+            method.call::<()>(&[name_str as *mut c_void])?;
         }
         Ok(())
     }

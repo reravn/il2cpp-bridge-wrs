@@ -130,7 +130,10 @@ impl<T: Copy> Il2cppArray<T> {
 
     /// Removes an element at the specified index
     ///
-    /// Shifts subsequent elements to the left.
+    /// Shifts subsequent elements to the left in place.
+    ///
+    /// IL2CPP arrays are fixed-size, so this does not change `max_length`.
+    /// The final slot is left as a duplicate of the former tail element.
     ///
     /// # Arguments
     /// * `index` - The index of the element to remove
@@ -139,54 +142,54 @@ impl<T: Copy> Il2cppArray<T> {
             return;
         }
 
-        if self.max_length > (index + 1) {
-            for i in index..(self.max_length - index) {
-                let next = self.get(i + 1);
-                self.set(i, next);
+        if index + 1 < self.max_length {
+            unsafe {
+                let data = self.get_pointer() as *mut T;
+                std::ptr::copy(
+                    data.add(index + 1),
+                    data.add(index),
+                    self.max_length - index - 1,
+                );
             }
         }
-
-        self.max_length -= 1;
     }
 
     /// Removes a range of elements
     ///
-    /// Shifts subsequent elements to the left.
+    /// Shifts subsequent elements to the left in place.
+    ///
+    /// IL2CPP arrays are fixed-size, so this does not change `max_length`.
+    /// Vacated tail slots are left duplicated from the previous tail values.
     ///
     /// # Arguments
     /// * `index` - The starting index
     /// * `count` - The number of elements to remove
     pub fn remove_range(&mut self, index: usize, mut count: usize) {
+        if index >= self.max_length {
+            return;
+        }
+
         if count == 0 {
             count = 1;
         }
 
-        let total = index + count;
-        if total >= self.max_length {
-            return;
-        }
+        let count = count.min(self.max_length - index);
+        let tail_len = self.max_length - index - count;
 
-        if self.max_length > (total + 1) {
-            for i in index..=(self.max_length - total) {
-                let next = self.get(i + count);
-                self.set(i, next);
+        if tail_len > 0 {
+            unsafe {
+                let data = self.get_pointer() as *mut T;
+                std::ptr::copy(data.add(index + count), data.add(index), tail_len);
             }
         }
-
-        self.max_length -= count;
     }
 
     /// Removes all elements from the array
     ///
-    /// Zeroes out the memory and sets max_length to 0.
-    pub fn remove_all(&mut self) {
-        if self.max_length > 0 {
-            unsafe {
-                std::ptr::write_bytes(self.get_data() as *mut T, 0, self.max_length);
-            }
-            self.max_length = 0;
-        }
-    }
+    /// IL2CPP arrays are fixed-size managed objects, so clearing them by
+    /// shrinking the header is unsupported. Overwrite elements explicitly if
+    /// you need sentinel values.
+    pub fn remove_all(&mut self) {}
 
     /// Converts the array to a Rust Vec
     ///

@@ -181,7 +181,7 @@ impl GameObject {
             let mut arg = active;
             self.method("SetActive")
                 .ok_or("Method 'SetActive' not found")?
-                .call::<c_void>(&[&mut arg as *mut bool as *mut c_void])?;
+                .call::<()>(&[&mut arg as *mut bool as *mut c_void])?;
             Ok(())
         }
     }
@@ -210,7 +210,7 @@ impl GameObject {
             let mut arg = layer;
             self.method("set_layer")
                 .ok_or("Method 'set_layer' not found")?
-                .call::<c_void>(&[&mut arg as *mut i32 as *mut c_void])?;
+                .call::<()>(&[&mut arg as *mut i32 as *mut c_void])?;
             Ok(())
         }
     }

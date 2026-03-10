@@ -60,7 +60,7 @@ impl Time {
         unsafe {
             if let Some(method) = Self::get_class().and_then(|cls| cls.method(("set_timeScale", 1)))
             {
-                let _ = method.call::<c_void>(&[&mut { value } as *mut f32 as *mut c_void]);
+                let _ = method.call::<()>(&[&mut { value } as *mut f32 as *mut c_void]);
             }
         }
     }

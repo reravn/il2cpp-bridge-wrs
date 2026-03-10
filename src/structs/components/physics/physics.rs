@@ -234,7 +234,7 @@ impl Physics {
             if let Some(method) = class.method("set_gravity") {
                 let mut value_cp = value;
                 let params = &mut [&mut value_cp as *mut Vector3 as *mut c_void];
-                let _ = unsafe { method.call::<c_void>(params) };
+                let _ = unsafe { method.call::<()>(params) };
             }
         }
     }

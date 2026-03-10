@@ -123,7 +123,7 @@ impl Method {
     ///
     /// # Returns
     /// * `Result<T, String>` - The return value or an error
-    pub unsafe fn call<T>(&self, params: &[*mut c_void]) -> Result<T, String> {
+    pub unsafe fn call<T: Copy>(&self, params: &[*mut c_void]) -> Result<T, String> {
         let instance = if self.is_static {
             ptr::null_mut()
         } else {
@@ -154,19 +154,69 @@ impl Method {
 
         let result = invoke_method(self.address, instance, params_ptr)?;
 
+        if std::mem::size_of::<T>() == 0 {
+            return Ok(std::mem::zeroed());
+        }
+
         let return_class = api::class_from_type(self.return_type.address);
         if return_class.is_null() {
+            if std::mem::size_of::<T>() != std::mem::size_of::<*mut c_void>() {
+                return Err(format!(
+                    "Method '{}' returns an unmanaged pointer-sized value, but caller requested {} bytes",
+                    self.name,
+                    std::mem::size_of::<T>()
+                ));
+            }
             return Ok(std::mem::transmute_copy(&result));
         }
 
         if api::class_is_valuetype(return_class) {
             if result.is_null() {
-                return Ok(std::mem::zeroed());
+                return Err(format!(
+                    "Method '{}' returned null for value type '{}'",
+                    self.name, self.return_type.name
+                ));
             }
 
             let unboxed = api::object_unbox(result);
-            Ok(ptr::read(unboxed as *const T))
+            if unboxed.is_null() {
+                return Err(format!(
+                    "Method '{}' returned a non-unboxable value for '{}'",
+                    self.name, self.return_type.name
+                ));
+            }
+
+            let expected_size = if self.return_type.size > 0 {
+                self.return_type.size as usize
+            } else {
+                api::class_value_size(return_class, ptr::null_mut()) as usize
+            };
+
+            if std::mem::size_of::<T>() != expected_size {
+                return Err(format!(
+                    "Method '{}' returns '{}' ({} bytes), but caller requested {} bytes",
+                    self.name,
+                    self.return_type.name,
+                    expected_size,
+                    std::mem::size_of::<T>()
+                ));
+            }
+
+            let mut value = std::mem::MaybeUninit::<T>::uninit();
+            ptr::copy_nonoverlapping(
+                unboxed as *const u8,
+                value.as_mut_ptr() as *mut u8,
+                expected_size,
+            );
+            Ok(value.assume_init())
         } else {
+            if std::mem::size_of::<T>() != std::mem::size_of::<*mut c_void>() {
+                return Err(format!(
+                    "Method '{}' returns a reference type, but caller requested {} bytes",
+                    self.name,
+                    std::mem::size_of::<T>()
+                ));
+            }
             Ok(std::mem::transmute_copy(&result))
         }
     }

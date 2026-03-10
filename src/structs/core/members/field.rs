@@ -93,7 +93,7 @@ impl Field {
                     .class
                     .ok_or_else(|| "Field does not have a parent class reference".to_string())?;
 
-                let static_data = api::class_get_static_field_data(class as *mut _);
+                let static_data = api::class_get_static_field_data((*class).address);
                 if static_data.is_null() {
                     return Err("Static field data is null".to_string());
                 }

@@ -199,7 +199,7 @@ impl UnityObject {
                 .method("Destroy")
                 .ok_or("Method 'Destroy' not found")?;
 
-            method.call::<c_void>(&[self.as_ptr(), &time_delay as *const f32 as *mut c_void])?;
+            method.call::<()>(&[self.as_ptr(), &time_delay as *const f32 as *mut c_void])?;
             Ok(())
         }
     }
@@ -223,7 +223,7 @@ impl UnityObject {
                 .method("DestroyImmediate")
                 .ok_or("Method 'DestroyImmediate' not found")?;
 
-            method.call::<c_void>(&[
+            method.call::<()>(&[
                 obj.as_ptr(),
                 &allow_destroying_assets as *const bool as *mut c_void,
             ])?;
@@ -246,7 +246,7 @@ impl UnityObject {
                 .method("DontDestroyOnLoad")
                 .ok_or("Method 'DontDestroyOnLoad' not found")?;
 
-            method.call::<c_void>(&[obj.as_ptr()])?;
+            method.call::<()>(&[obj.as_ptr()])?;
             Ok(())
         }
     }

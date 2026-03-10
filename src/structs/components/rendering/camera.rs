@@ -152,10 +152,9 @@ impl Camera {
     /// * `Result<(), String>` - Ok if success
     pub fn set_depth(&self, depth: f32) -> Result<(), String> {
         unsafe {
-            let _ = self
-                .method("set_depth")
+            self.method("set_depth")
                 .ok_or("Method 'set_depth' not found")?
-                .call::<c_void>(&[&depth as *const f32 as *mut c_void])?;
+                .call::<()>(&[&depth as *const f32 as *mut c_void])?;
         }
         Ok(())
     }
@@ -181,10 +180,9 @@ impl Camera {
     /// * `Result<(), String>` - Ok if success
     pub fn set_field_of_view(&self, fov: f32) -> Result<(), String> {
         unsafe {
-            let _ = self
-                .method("set_fieldOfView")
+            self.method("set_fieldOfView")
                 .ok_or("Method 'set_fieldOfView' not found")?
-                .call::<c_void>(&[&fov as *const f32 as *mut c_void])?;
+                .call::<()>(&[&fov as *const f32 as *mut c_void])?;
         }
         Ok(())
     }
