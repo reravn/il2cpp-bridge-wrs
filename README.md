@@ -1,9 +1,8 @@
 # il2cpp-bridge-rs
 
-[![License](https://img.shields.io/badge/license-MIT-black?style=flat-square)](LICENSE)
-[![Rust](https://img.shields.io/badge/rust-1.70+-black?style=flat-square&logo=rust&logoColor=white)](https://www.rust-lang.org)
-[![Platform](https://img.shields.io/badge/platform-iOS%20%C2%B7%20macOS%20%C2%B7%20Linux%20%C2%B7%20Android%20%C2%B7%20Windows-black?style=flat-square)](#platform-support)
-[![Issues](https://img.shields.io/github/issues/Batchhh/il2cpp-bridge-rs?style=flat-square&color=black)](https://github.com/Batchhh/il2cpp-bridge-rs/issues)
+<a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-222?style=for-the-badge&logoColor=white" alt="License"></a>
+<a href="https://www.rust-lang.org"><img src="https://img.shields.io/badge/rust-1.70+-222?style=for-the-badge&logo=rust&logoColor=white" alt="Rust"></a>
+<a href="#platform-support"><img src="https://img.shields.io/badge/platform-iOS%20%C2%B7%20macOS%20%C2%B7%20Linux%20%C2%B7%20Android%20%C2%B7%20Windows-222?style=for-the-badge&logoColor=white" alt="Platform"></a>
 
 A high-performance Rust bridge to Unity's IL2CPP runtime. It resolves IL2CPP's exported C functions at runtime and wraps them in a safe, ergonomic API — letting you query types, invoke methods, and manipulate Unity objects directly from native code.
 
