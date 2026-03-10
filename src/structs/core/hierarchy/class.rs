@@ -1,3 +1,5 @@
+//! Class metadata wrapper and lookup helpers.
+
 use crate::api::{self, cache};
 use crate::structs::collections::Il2cppArray;
 use crate::structs::core::{Field, Method, Property};
@@ -6,6 +8,12 @@ use std::sync::Arc;
 
 use super::object::Object;
 
+/// Hydrated IL2CPP class metadata.
+///
+/// A `Class` is the main entry point for metadata-driven workflows after
+/// fetching an [`crate::structs::Assembly`] from the cache. From here you can
+/// locate methods, fields, properties, create objects, or search for live
+/// instances in the scene.
 #[derive(Debug, Clone)]
 pub struct Class {
     /// Pointer to the internal IL2CPP class structure
@@ -76,20 +84,20 @@ pub struct Class {
 unsafe impl Send for Class {}
 unsafe impl Sync for Class {}
 
-/// Trait used to select methods from a class based on various criteria
+/// Selector trait used by [`Class::method`] and [`crate::structs::Object::method`].
 pub trait MethodSelector {
     /// Returns true if the method matches the selector criteria
     fn matches(&self, method: &Method) -> bool;
 }
 
-/// Selects a method by its name
+/// Selects a method by name.
 impl MethodSelector for &str {
     fn matches(&self, method: &Method) -> bool {
         method.name == *self
     }
 }
 
-/// Selects a method by name and parameter names
+/// Selects a method by name and parameter type names.
 impl MethodSelector for (&str, &[&str]) {
     fn matches(&self, method: &Method) -> bool {
         if method.name != self.0 {
@@ -110,14 +118,14 @@ impl MethodSelector for (&str, &[&str]) {
     }
 }
 
-/// Selects a method by name and parameter names (fixed size array)
+/// Selects a method by name and parameter type names using a fixed-size array.
 impl<const N: usize> MethodSelector for (&str, [&str; N]) {
     fn matches(&self, method: &Method) -> bool {
         (self.0, self.1.as_slice()).matches(method)
     }
 }
 
-/// Selects a method by name and parameter count
+/// Selects a method by name and parameter count.
 impl MethodSelector for (&str, usize) {
     fn matches(&self, method: &Method) -> bool {
         method.name == self.0 && method.args.len() == self.1
@@ -288,12 +296,9 @@ impl Class {
         s
     }
 
-    /// Creates a new instance of the class using `Activator.CreateInstance`
+    /// Creates a managed instance using `System.Activator.CreateInstance`.
     ///
-    /// This method attempts to find the default constructor and invoke it.
-    ///
-    /// # Returns
-    /// * `Result<Object, String>` - The created object, or appropriate error
+    /// Use this when you want constructor semantics rather than raw allocation.
     pub fn create_instance(&self) -> Result<Object, String> {
         unsafe {
             if self.ty.is_null() {
@@ -325,12 +330,10 @@ impl Class {
         }
     }
 
-    /// Creates a new object of this class using `il2cpp_object_new`
+    /// Allocates a new object of this class via `il2cpp_object_new`.
     ///
-    /// This is the low-level allocation method.
-    ///
-    /// # Returns
-    /// * `Result<Object, String>` - The allocated object
+    /// This is the low-level allocation path and does not imply constructor
+    /// execution.
     pub fn new_object(&self) -> Result<Object, String> {
         unsafe {
             let obj = Object::from_ptr(api::object_new(self.address));
@@ -341,12 +344,7 @@ impl Class {
         }
     }
 
-    /// Creates a new ScriptableObject instance of this class
-    ///
-    /// Wrapper for `ScriptableObject.CreateInstance(Type type)`
-    ///
-    /// # Returns
-    /// * `Result<Object, String>` - The created ScriptableObject
+    /// Creates a `ScriptableObject` instance of this class.
     pub fn create_scriptable_instance(&self) -> Result<Object, String> {
         unsafe {
             if self.object.is_null() {
@@ -375,15 +373,10 @@ impl Class {
         }
     }
 
-    /// Finds all active (and optionally inactive) objects of this type in the scene
+    /// Finds live objects of this type in the scene.
     ///
-    /// This wraps `UnityEngine.Object.FindObjectsOfType`.
-    ///
-    /// # Arguments
-    /// * `include_inactive` - Whether to include inactive objects in the search
-    ///
-    /// # Returns
-    /// * `Vec<Object>` - A list of found objects
+    /// This wraps `UnityEngine.Object.FindObjectsOfType` and returns bound
+    /// [`Object`] wrappers for each match.
     pub fn find_objects_of_type(&self, include_inactive: bool) -> Vec<Object> {
         if self.object.is_null() {
             return Vec::new();
@@ -423,16 +416,10 @@ impl Class {
         }
     }
 
-    /// Finds a method in the class matching the given selector
+    /// Finds a method in this class or its parent chain.
     ///
-    /// # Type Parameters
-    /// * `S` - A type that implements `MethodSelector`
-    ///
-    /// # Arguments
-    /// * `selector` - The selector to use for finding the method (name, params, etc.)
-    ///
-    /// # Returns
-    /// * `Option<Method>` - The found method, or None
+    /// Selectors may match by name, by name plus parameter type names, or by
+    /// name plus parameter count.
     pub fn method<S: MethodSelector>(&self, selector: S) -> Option<Method> {
         if let Some(method) = self.methods.iter().find(|m| selector.matches(m)).cloned() {
             return Some(method);
@@ -447,13 +434,7 @@ impl Class {
         None
     }
 
-    /// Finds a field in the class with the given name
-    ///
-    /// # Arguments
-    /// * `name` - The name of the field to find
-    ///
-    /// # Returns
-    /// * `Option<Field>` - The found field, or None
+    /// Finds a field in this class or its parent chain.
     pub fn field(&self, name: &str) -> Option<Field> {
         if let Some(field) = self.fields.iter().find(|f| f.name == name).cloned() {
             return Some(field);
@@ -468,13 +449,7 @@ impl Class {
         None
     }
 
-    /// Finds a property in the class with the given name
-    ///
-    /// # Arguments
-    /// * `name` - The name of the property to find (without get_/set_ prefix)
-    ///
-    /// # Returns
-    /// * `Option<Property>` - The found property, or None
+    /// Finds a property in this class or its parent chain.
     pub fn property(&self, name: &str) -> Option<Property> {
         if let Some(prop) = self.properties.iter().find(|p| p.name == name).cloned() {
             return Some(prop);

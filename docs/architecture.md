@@ -1,87 +1,82 @@
 # Architecture
 
-## Module Overview
+This crate is intentionally layered so most users can stay in cache/object/wrapper APIs while contributors can reason about the lower-level runtime boundary.
 
-```
-il2cpp-bridge-rs
-├── init            Entry point — spawns background thread, manages callbacks
-├── api             IL2CPP runtime interface
-│   ├── core
-│   │   ├── api         FFI bindings (200+ functions via macro)
-│   │   ├── cache       Thread-safe assembly/class/method cache
-│   │   ├── internals   Internal call resolution
-│   │   └── runtime
-│   │       ├── thread    RAII VM thread attachment
-│   │       └── caller    Method invocation with exception handling
-│   ├── debugging
-│   │   └── cs          Metadata dump to string/file
-│   └── wrappers
-│       ├── application UnityEngine.Application properties
-│       └── time        Time utilities
-├── memory          Low-level memory operations
-│   ├── rw            Generic pointer read/write
-│   └── info
-│       ├── symbol      Symbol resolution (per-platform)
-│       └── image       Image base address lookup (per-platform)
-├── structs         Type definitions mirroring IL2CPP/Unity
-│   ├── core          Class, Object, Method, Field, Property, Assembly, Image, Type
-│   ├── collections   Il2cppString, Il2cppArray, Il2cppList, Il2cppDictionary
-│   ├── components    GameObject, Transform, Camera, Rigidbody, etc.
-│   └── math          Vector2/3/4, Quaternion, Color, Matrix types
-└── logger          Debug-only logging (gated by #[cfg(dev_release)])
-```
+## Layered View
 
-## Data Flow
+```text
+init
+  -> runtime symbol loading
+  -> thread attachment
+  -> assembly cache load
+  -> class hydration
+  -> user callbacks
 
-```
-init(target_image, callback)
-  │
-  ├─ memory::symbol::resolve_symbol()    Resolve each IL2CPP export by name
-  │     └─ Platform: dlsym / GetProcAddress
-  │
-  ├─ api::load()                         Populate function pointer table
-  │     └─ define_il2cpp_functions! macro generates 200+ bindings
-  │
-  ├─ api::Thread::attach()               Attach to the IL2CPP VM
-  │     └─ Auto-detaches on drop (RAII)
-  │
-  ├─ api::cache::init()                  Build assembly cache (with retries)
-  │     ├─ domain_get() → domain_get_assemblies()
-  │     └─ Hydrate Assembly structs into DashMap
-  │
-  ├─ api::cache::ensure_hydrated()       Hydrate all classes (deferred)
-  │     └─ Populates fields, methods, properties for each class
-  │
-  └─ callback()                          Fire queued callbacks
+api
+  -> raw IL2CPP bindings
+  -> cache helpers
+  -> method invocation
+  -> thread management
+  -> dump helpers
+  -> small Unity wrappers
+
+structs
+  -> metadata wrappers (Assembly, Class, Method, Field, Property, Type)
+  -> object wrappers (Object, GameObject, Transform, MonoBehaviour, ...)
+  -> collection and math helpers
+
+memory
+  -> symbol resolution
+  -> image base lookup
+  -> raw memory read/write
 ```
 
-## Key Patterns
+## Initialization Flow
 
-### Macro-Generated FFI
+`init` is the front door for the crate.
 
-`define_il2cpp_functions!` in `src/api/core/api.rs` generates:
-- Type aliases for each function signature
-- A struct holding all function pointers
-- A `load()` function that resolves symbols and populates the struct
-- Safe wrapper functions for each binding
+During initialization the crate:
 
-### Thread-Safe Caching
+1. resolves exported IL2CPP functions
+2. loads the FFI function table
+3. attaches the worker thread to the IL2CPP VM
+4. enumerates assemblies into a global cache
+5. hydrates classes, methods, fields, and properties
+6. runs queued callbacks
 
-`DashMap`-based concurrent cache in `src/api/core/cache.rs`:
-- Assemblies stored as `Arc<Assembly>` for cheap cloning across threads
-- Classes stored as `Box<Class>` with full metadata
-- Methods indexed by `ClassName::MethodName` key
-- Hydration is deferred and runs once via `AtomicBool` guard
+If symbol resolution or cache initialization fails, the state resets so initialization can be attempted again.
 
-### Platform Abstraction
+## Cache Design
 
-`memory/info/symbol.rs` and `memory/info/image.rs` use `#[cfg]` blocks to select platform-specific implementations:
-- **macOS/iOS**: `dlsym`, `dyld` APIs via `mach2`
-- **Linux/Android**: `dlsym`, `dl_iterate_phdr` via `libc`
-- **Windows**: `GetProcAddress`, `GetModuleHandleA` via `windows-sys`
+The cache exists to make repeated metadata lookup cheap and predictable.
 
-### RAII Thread Management
+- assemblies are stored as `Arc<Assembly>`
+- classes are stored in a global lookup map
+- methods are indexed for fast reuse
+- class hydration is guarded so it only runs once per successful initialization cycle
 
-`Thread` in `src/api/core/runtime/thread.rs`:
-- `Thread::attach(auto_detach)` attaches to the IL2CPP GC domain
-- When `auto_detach` is `true`, the thread detaches on `Drop`
+For most users, `api::cache` is the only cache surface they should touch directly.
+
+## Invocation Model
+
+Invocation is split across two layers:
+
+- `api::invoke_method` is the raw pointer-level helper
+- `Method::call<T>` is the normal user-facing path
+
+`Method::call<T>` validates the argument count, handles instance binding, differentiates reference vs value-type returns, and converts managed exceptions into `Err(String)`.
+
+## Thread Model
+
+IL2CPP is thread-sensitive. The crate exposes `api::Thread` as the explicit mechanism for attaching and detaching threads outside the initialization path.
+
+This is a design choice, not just a convenience wrapper. The thread boundary is one of the main correctness constraints in the entire crate.
+
+## Wrapper Philosophy
+
+Wrappers under `api::wrappers` and `structs::components` exist to make common Unity tasks less repetitive:
+
+- `Application` and `Time` expose familiar Unity concepts
+- `GameObject`, `Transform`, `MonoBehaviour`, and related types layer on top of `Object` and `Method`
+
+These wrappers should stay thin. If a behavior belongs to core runtime or metadata semantics, it should live in the lower layer first.

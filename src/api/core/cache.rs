@@ -1,4 +1,8 @@
-//! Caching system for IL2CPP assemblies, classes, and methods
+//! Global cache for hydrated IL2CPP metadata.
+//!
+//! The cache is populated during [`crate::init`] and is the normal starting
+//! point for metadata-driven workflows. Most users should use the helper
+//! functions in this module rather than traversing IL2CPP metadata manually.
 use super::api;
 #[cfg(dev_release)]
 use crate::logger;
@@ -34,13 +38,11 @@ pub static CACHE: Lazy<Il2CppCache> = Lazy::new(|| Il2CppCache {
     methods: DashMap::new(),
 });
 
-/// Retrieves an assembly by name (returns cheap Arc clone)
+/// Retrieves an assembly by name.
 ///
-/// # Arguments
-/// * `name` - The name of the assembly (with or without .dll extension)
+/// The name may be provided with or without the `.dll` suffix.
 ///
-/// # Returns
-/// * `Option<Arc<Assembly>>` - The requested assembly if found, or None
+/// Returns a cheap [`Arc`] clone if the assembly exists in the hydrated cache.
 pub fn assembly(name: &str) -> Option<Arc<Assembly>> {
     if let Some(asm) = CACHE.assemblies.get(name) {
         return Some(Arc::clone(&asm));
@@ -56,13 +58,12 @@ pub fn assembly(name: &str) -> Option<Arc<Assembly>> {
     None
 }
 
-/// Helper to get mscorlib assembly (cached)
-///
-/// # Returns
-/// * `Arc<Assembly>` - The mscorlib assembly
+/// Returns the cached `mscorlib.dll` assembly.
 ///
 /// # Panics
-/// Panics if mscorlib is not found.
+///
+/// Panics if the cache is not ready or if `mscorlib.dll` is unavailable in the
+/// current runtime.
 pub fn mscorlib() -> Arc<Assembly> {
     const KEY: &str = "mscorlib.dll";
 
@@ -73,13 +74,12 @@ pub fn mscorlib() -> Arc<Assembly> {
     assembly(KEY).expect("mscorlib not found")
 }
 
-/// Helper to get Assembly-CSharp assembly (cached)
-///
-/// # Returns
-/// * `Arc<Assembly>` - The Assembly-CSharp assembly
+/// Returns the cached `Assembly-CSharp.dll` assembly.
 ///
 /// # Panics
-/// Panics if Assembly-CSharp is not found.
+///
+/// Panics if the cache is not ready or if `Assembly-CSharp.dll` is unavailable
+/// in the current runtime.
 pub fn csharp() -> Arc<Assembly> {
     const KEY: &str = "Assembly-CSharp.dll";
 
@@ -90,13 +90,12 @@ pub fn csharp() -> Arc<Assembly> {
     assembly(KEY).expect("Assembly-CSharp not found")
 }
 
-/// Helper to get UnityEngine.CoreModule assembly (cached)
-///
-/// # Returns
-/// * `Arc<Assembly>` - The UnityEngine.CoreModule assembly
+/// Returns the cached `UnityEngine.CoreModule.dll` assembly.
 ///
 /// # Panics
-/// Panics if UnityEngine.CoreModule is not found.
+///
+/// Panics if the cache is not ready or if `UnityEngine.CoreModule.dll` is
+/// unavailable in the current runtime.
 pub fn coremodule() -> Arc<Assembly> {
     const KEY: &str = "UnityEngine.CoreModule.dll";
 
@@ -107,13 +106,10 @@ pub fn coremodule() -> Arc<Assembly> {
     assembly(KEY).expect("UnityEngine.CoreModule not found")
 }
 
-/// Retrieves a class from a raw pointer using the cache
+/// Hydrates a [`Class`] from a raw `Il2CppClass` pointer.
 ///
-/// # Arguments
-/// * `ptr` - A pointer to the Il2CppClass
-///
-/// # Returns
-/// * `Option<Class>` - The hydrated Class struct if successful, or None
+/// This is mainly useful when lower-level APIs hand you raw class pointers and
+/// you want to re-enter the safe-ish metadata layer.
 pub fn class_from_ptr(ptr: *mut c_void) -> Option<Class> {
     if ptr.is_null() {
         return None;
@@ -121,9 +117,11 @@ pub fn class_from_ptr(ptr: *mut c_void) -> Option<Class> {
     unsafe { hydrate_class(ptr).ok() }
 }
 
-/// Initializes the cache by loading all assemblies (without class hydration).
+/// Initializes the cache by loading all assemblies and resetting prior state.
 ///
-/// Class hydration is deferred and performed on demand via [`ensure_hydrated`].
+/// Class hydration is deferred and performed via [`ensure_hydrated`].
+///
+/// This is primarily used internally by [`crate::init`].
 pub fn init() -> bool {
     CACHE.assemblies.clear();
     CACHE.classes.clear();
@@ -146,9 +144,10 @@ pub fn init() -> bool {
     }
 }
 
-/// Ensures all classes are hydrated, hydrating once and caching the result.
+/// Ensures full class hydration has happened for the current initialization pass.
 ///
-/// Safe to call multiple times — hydration only runs on the first call after each [`init`].
+/// Safe to call multiple times. Hydration runs at most once after each
+/// successful [`init`] call.
 pub fn ensure_hydrated() {
     if CLASSES_HYDRATED
         .compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst)
@@ -160,7 +159,7 @@ pub fn ensure_hydrated() {
 
 /// Hydrates all classes in all cached assemblies.
 ///
-/// Prefer [`ensure_hydrated`] which guards against redundant calls.
+/// Prefer [`ensure_hydrated`] unless you are working on cache internals.
 pub fn hydrate_all_classes() {
     let assembly_names: Vec<String> = CACHE
         .assemblies

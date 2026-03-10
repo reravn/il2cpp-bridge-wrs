@@ -1,4 +1,4 @@
-//! Unity GameObject wrapper
+//! Unity `GameObject` wrapper.
 use super::component::ComponentTrait;
 use super::transform::Transform;
 use super::unity_object::UnityObject;
@@ -9,6 +9,10 @@ use crate::structs::Il2cppString;
 use std::ffi::c_void;
 use std::ops::Deref;
 
+/// Wrapper for a managed `UnityEngine.GameObject`.
+///
+/// This builds on top of [`UnityObject`] and is useful once you already have a
+/// live Unity object or want to find a scene object by name.
 #[repr(transparent)]
 #[derive(Debug, Clone)]
 pub struct GameObject {
@@ -65,13 +69,7 @@ impl GameObject {
         }
     }
 
-    /// Finds a GameObject by name
-    ///
-    /// # Arguments
-    /// * `name` - The name of the GameObject to find
-    ///
-    /// # Returns
-    /// * `Result<GameObject, String>` - The found GameObject, or error if not found
+    /// Finds a scene `GameObject` by name.
     pub fn find(name: &str) -> Result<GameObject, String> {
         let core_module = cache::coremodule();
         let game_object_class = core_module

@@ -1,4 +1,8 @@
-//! Initialization of the IL2CPP runtime and cache
+//! Initialization of the IL2CPP runtime and metadata cache.
+//!
+//! [`init`] is the front door to the crate. It resolves IL2CPP exports, loads
+//! the function table, attaches the worker thread to the runtime, initializes
+//! the cache, hydrates metadata, and then runs queued callbacks.
 use crate::api::{self, cache, Thread};
 use crate::memory::symbol::resolve_symbol;
 use std::ffi::c_void;
@@ -27,19 +31,40 @@ static STATE: Mutex<State> = Mutex::new(State::Idle);
 const CACHE_INIT_MAX_ATTEMPTS: u8 = 5;
 const CACHE_INIT_RETRY_DELAY: Duration = Duration::from_secs(3);
 
-/// Initializes the IL2CPP runtime and its internal cache.
+/// Initializes IL2CPP symbol loading and cache hydration.
 ///
-/// - First call: spawns the background init thread and queues `on_complete`.
-/// - Calls while the thread is running: queue `on_complete`; it fires when the
-///   thread finishes.
-/// - Calls after init is done: dispatch `on_complete` to the main thread
-///   immediately.
+/// This function must be called before using cache-backed helpers such as
+/// [`crate::api::cache::csharp`] or class/method lookups that depend on the
+/// hydrated metadata cache.
 ///
-/// # Type Parameters
-/// * `F` - A closure that runs when initialization is complete. Must be `Send` and `'static`.
+/// Behavior:
 ///
-/// # Arguments
-/// * `on_complete` - The callback to execute after successful initialization.
+/// - First call: spawns the initialization worker and queues `on_complete`.
+/// - Calls while initialization is running: queue additional callbacks.
+/// - Calls after successful initialization: execute `on_complete` immediately
+///   on a newly spawned thread.
+/// - On failure: the internal state resets to idle so initialization can be
+///   attempted again.
+///
+/// The `target_image` should be the loaded module used to compute image base
+/// addresses and method RVA/VA information. Common values include
+/// `UnityFramework` on iOS and `GameAssembly` on many desktop Unity builds.
+///
+/// # Example
+///
+/// ```no_run
+/// use il2cpp_bridge_rs::{api, init};
+///
+/// init("GameAssembly", || {
+///     let asm = api::cache::csharp();
+///     println!("Ready: {}", asm.name);
+/// });
+/// ```
+///
+/// # Parameters
+///
+/// - `target_image`: name of the loaded image backing RVA/VA calculations
+/// - `on_complete`: callback executed after a successful initialization pass
 pub fn init<F>(target_image: &str, on_complete: F)
 where
     F: FnOnce() + Send + 'static,

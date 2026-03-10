@@ -1,4 +1,4 @@
-//! Assembly dumping functionality
+//! Metadata dump helpers that emit C#-like pseudo-code.
 use crate::api::{cache, Application};
 #[cfg(dev_release)]
 use crate::logger;
@@ -167,16 +167,10 @@ fn dump_assemblies_impl(base_path: Option<&str>, single_file_name: Option<&str>)
     }
 }
 
-/// Dumps the pseudo-code for the specified assembly
+/// Dumps a single assembly into a `.cs` file under the default dump directory.
 ///
-/// This function converts the assembly metadata into C#-like pseudo-code,
-/// including classes, fields, and methods, and writes it to a file.
-///
-/// # Arguments
-/// * `assembly_to_dump` - Optional name of the assembly to dump. If None, it dumps all assemblies into one file.
-///
-/// # Returns
-/// * `Option<()>` - Some(()) if successful, or None on failure.
+/// If `assembly_to_dump` is `None`, this falls back to [`dump_all`] for legacy
+/// behavior.
 pub fn dump_assembly(assembly_to_dump: Option<&str>) -> Option<()> {
     // If no specific assembly, dump all to "dump.cs" (legacy behavior matches dump_all essentially)
     if assembly_to_dump.is_none() {
@@ -231,46 +225,30 @@ pub fn dump_assembly(assembly_to_dump: Option<&str>) -> Option<()> {
     Some(())
 }
 
-/// Dumps pseudo-code for all loaded assemblies
+/// Dumps all loaded assemblies into separate `.cs` files.
 ///
-/// This function iterates over all loaded assemblies and dumps each one into
-/// a separate .cs file in the `dump` directory.
-///
-/// # Returns
-/// * `Option<String>` - The path to the dump directory, or None on failure.
+/// Returns the output directory path on success.
 pub fn dump() -> Option<String> {
     dump_assemblies_impl(None, None)
 }
 
-/// Dumps all assemblies into a single dump.cs file (AIO - All In One)
+/// Dumps all loaded assemblies into a single `dump.cs` file.
 ///
-/// This function consolidates all loaded assemblies into one file,
-/// providing a single-file overview of all game types.
-///
-/// # Returns
-/// * `Option<String>` - The path to the dump.cs file, or None on failure.
+/// Returns the output file path on success.
 pub fn dump_all() -> Option<String> {
     dump_assemblies_impl(None, Some("dump.cs"))
 }
 
-/// Dumps pseudo-code for all loaded assemblies to a custom location
+/// Dumps all loaded assemblies into separate `.cs` files under `base_path`.
 ///
-/// # Arguments
-/// * `base_path` - The base directory to dump to
-///
-/// # Returns
-/// * `Option<String>` - The path to the dump directory, or None on failure.
+/// Returns the output directory path on success.
 pub fn dump_to(base_path: &str) -> Option<String> {
     dump_assemblies_impl(Some(base_path), None)
 }
 
-/// Dumps all assemblies into a single dump.cs file at a custom location
+/// Dumps all loaded assemblies into a single `dump.cs` file under `base_path`.
 ///
-/// # Arguments
-/// * `base_path` - The base directory to dump to
-///
-/// # Returns
-/// * `Option<String>` - The path to the dump.cs file, or None on failure.
+/// Returns the output file path on success.
 pub fn dump_all_to(base_path: &str) -> Option<String> {
     dump_assemblies_impl(Some(base_path), Some("dump.cs"))
 }

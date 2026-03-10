@@ -3,7 +3,7 @@ use super::method::Method;
 use crate::structs::core::Type;
 use std::ffi::c_void;
 
-/// Represents an IL2CPP Property (combines get/set accessor methods)
+/// Property metadata synthesized from getter and setter methods.
 #[derive(Debug, Clone)]
 pub struct Property {
     /// Name of the property (without get_/set_ prefix)
@@ -100,13 +100,10 @@ impl Property {
         self.setter.is_some()
     }
 
-    /// Gets the value of the property by calling the getter method
+    /// Reads the property value through its getter.
     ///
-    /// # Type Parameters
-    /// * `T` - The expected return type
-    ///
-    /// # Returns
-    /// * `Result<T, String>` - The property value or an error
+    /// For instance properties, the property must have a bound instance
+    /// pointer. Use [`crate::structs::Object::property`] to obtain one.
     pub unsafe fn get_value<T: Copy>(&self) -> Result<T, String> {
         let getter = self
             .getter
@@ -128,16 +125,10 @@ impl Property {
         method.call::<T>(&[])
     }
 
-    /// Sets the value of the property by calling the setter method
+    /// Writes a property value through its setter.
     ///
-    /// # Type Parameters
-    /// * `T` - The type of the value to set
-    ///
-    /// # Arguments
-    /// * `value` - The value to set
-    ///
-    /// # Returns
-    /// * `Result<(), String>` - Ok if success, Err if failure
+    /// For instance properties, the property must have a bound instance
+    /// pointer. Use [`crate::structs::Object::property`] to obtain one.
     pub unsafe fn set_value<T>(&self, value: T) -> Result<(), String> {
         let setter = self
             .setter

@@ -1,12 +1,13 @@
-//! Unity Time wrappers
+//! Thin wrapper around `UnityEngine.Time`.
 //!
-//! Provides access to the `UnityEngine.Time` class for time-related information.
+//! These helpers are intentionally small and are mainly useful as examples of
+//! cache-backed static property access.
 
 use crate::api::cache;
 use crate::structs::core::Class;
 use std::ffi::c_void;
 
-/// Wrapper for `UnityEngine.Time`
+/// Accessors for selected `UnityEngine.Time` properties.
 pub struct Time;
 
 impl Time {

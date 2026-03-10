@@ -1,73 +1,131 @@
 # il2cpp-bridge-rs
 
-<a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-222?style=for-the-badge&logoColor=white" alt="License"></a>
-<a href="https://www.rust-lang.org"><img src="https://img.shields.io/badge/rust-1.70+-222?style=for-the-badge&logo=rust&logoColor=white" alt="Rust"></a>
-<a href="#platform-support"><img src="https://img.shields.io/badge/platform-iOS%20%C2%B7%20macOS%20%C2%B7%20Linux%20%C2%B7%20Android%20%C2%B7%20Windows-222?style=for-the-badge&logoColor=white" alt="Platform"></a>
+`il2cpp-bridge-rs` is a Rust library for exploring and interacting with Unity's IL2CPP runtime from native code. It resolves IL2CPP exports at runtime, builds a metadata cache, and exposes ergonomic wrappers for common tasks such as class lookup, method invocation, metadata dumping, and Unity object access.
 
-A high-performance Rust bridge to Unity's IL2CPP runtime. It resolves IL2CPP's exported C functions at runtime and wraps them in a safe, ergonomic API — letting you query types, invoke methods, and manipulate Unity objects directly from native code.
+## Who This Is For
 
-![Code](docs/images/code.png)
+This crate is aimed at engineers who are already working inside a native environment where Unity and IL2CPP are loaded:
 
-### Why Rust?
+- native plugins and injected libraries
+- runtime tooling and diagnostics
+- IL2CPP introspection utilities
+- Unity wrappers built on top of raw IL2CPP metadata
 
-Built in Rust for maximum performance: zero-cost C FFI means no overhead on every IL2CPP call, no garbage collector or runtime competing with Unity's, and compile-time memory safety around the raw pointer operations that IL2CPP introspection demands. The result is a library that's as fast as hand-written C but significantly harder to misuse.
+If you need a general Unity mod loader or a standalone game patching framework, this crate is a building block rather than a complete solution.
 
-## Features
+## Runtime Assumptions
 
-- **Full IL2CPP introspection** — resolve assemblies, classes, methods, fields, and properties by name at runtime
-- **Type-safe method invocation** — call any IL2CPP method with argument validation, return type unboxing, and automatic managed exception handling
-- **Concurrent caching** — `DashMap`-backed cache for fast, thread-safe lookups across assemblies and types
-- **Unity type wrappers** — ready-to-use wrappers for `GameObject`, `Transform`, `Camera`, `Vector3`, `Quaternion`, and more
-- **Metadata dumping** — export full class/method metadata to files for offline analysis
-- **Cross-platform** — macOS/iOS, Linux/Android, Windows with platform-specific symbol resolution
+Before using the API, keep these constraints in mind:
 
-## Quick Start
+- A live IL2CPP runtime must already be loaded in the current process.
+- You must call [`init`](src/init.rs) before relying on cache-backed lookups such as `api::cache::csharp()`.
+- Many operations ultimately work with raw pointers and runtime-owned memory. The crate reduces footguns, but it does not make IL2CPP integration fully safe.
+- Method calls, field access, and object wrappers only make sense while the target Unity runtime is alive and compatible with the expected metadata.
+- Some operations require the current thread to be attached to the IL2CPP VM. Use `api::Thread` when you are doing work outside the initialization callback.
+
+## Installation
 
 ```bash
 cargo add il2cpp-bridge-rs
 ```
 
-The source code is well-structured and the best way to understand the full API — dig into `src/structs/` for type wrappers, `src/api/` for runtime bindings and caching, and `src/api/wrappers/` for real-world usage patterns.
+## Build and Validation
 
-## Building
+The repo includes a `Makefile` with common workflows:
 
-A `Makefile` is provided for convenience. Each platform has `build-*`, `build-*-release`, `check-*`, and `clippy-*` targets:
+```bash
+make build
+make check
+make clippy
+make doc
+```
 
-| Platform | Build | Release | Check | Clippy |
-|----------|-------|---------|-------|--------|
-| Host | `make build` | `make build-release` | `make check` | `make clippy` |
-| iOS | `make build-ios` | `make build-ios-release` | `make check-ios` | `make clippy-ios` |
-| macOS | `make build-macos` | `make build-macos-release` | `make check-macos` | `make clippy-macos` |
-| Linux | `make build-linux` | `make build-linux-release` | `make check-linux` | `make clippy-linux` |
-| Android | `make build-android` | `make build-android-release` | `make check-android` | `make clippy-android` |
-| Windows | `make build-windows` | `make build-windows-release` | `make check-windows` | `make clippy-windows` |
+Platform-specific targets are also available, including `make build-ios`, `make build-macos`, `make build-linux`, `make build-android`, and `make build-windows`.
 
-Utilities: `make doc` (generate and open docs), `make clean` (clean build artifacts).
+## First Successful Flow
 
-## Platform Support
+The snippet below shows the intended happy path: initialize the runtime, fetch a cached assembly, resolve a class, inspect a method, and call an instance method if an object is available.
 
-| Platform | Target | Symbol Resolution | Image Base |
-|----------|--------|-------------------|------------|
-| macOS/iOS | `aarch64-apple-ios` | `dlsym` | `dyld` |
-| Linux/Android | `aarch64-linux-android` | `dlsym` | `dl_iterate_phdr` |
-| Windows | `x86_64-pc-windows-msvc` | `GetProcAddress` | `GetModuleHandleA` |
+This example is illustrative. It compiles as Rust, but it requires a live Unity IL2CPP runtime to do anything useful.
 
-## Documentation
+```rust
+use il2cpp_bridge_rs::{api, init};
+use std::ffi::c_void;
 
-See the [`docs/`](docs/) directory:
+init("GameAssembly", || {
+    let asm = api::cache::csharp();
+    let player_class = asm
+        .class("PlayerController")
+        .expect("PlayerController should exist after cache hydration");
+
+    let damage_method = player_class
+        .method(("TakeDamage", ["System.Single"]))
+        .expect("TakeDamage(float) should exist");
+
+    println!(
+        "Resolved {}::{} at RVA 0x{:X}",
+        player_class.name,
+        damage_method.name,
+        damage_method.rva
+    );
+
+    if let Some(player) = player_class.find_objects_of_type(false).into_iter().next() {
+        let bound_method = player
+            .method(("TakeDamage", ["System.Single"]))
+            .expect("instance method should bind automatically");
+
+        let damage: f32 = 25.0;
+        unsafe {
+            let _: Result<(), _> =
+                bound_method.call(&[&damage as *const f32 as *mut c_void]);
+        }
+    }
+});
+```
+
+## Documentation Map
+
+The markdown guides explain workflows and caveats. Generated rustdoc should be treated as the source of truth for exact signatures.
 
 - [Getting Started](docs/getting-started.md)
+- [Core Workflows](docs/core-workflows.md)
+- [Platform and Runtime Notes](docs/platform-support.md)
 - [Architecture](docs/architecture.md)
-- [API Reference](docs/api-reference.md)
-- [Platform Support](docs/platform-support.md)
+- [API Map](docs/api-reference.md)
 
-## Issues
+To build rustdoc locally:
 
-Found a bug or running into an error? [Open an issue](https://github.com/Batchhh/il2cpp-bridge-rs/issues/new/choose) — we have templates to help you provide the right details.
+```bash
+cargo doc --no-deps
+```
+
+## Primary Entry Points
+
+Most users will spend time in these APIs first:
+
+- `init`
+- `api::cache`
+- `api::Thread`
+- `api::invoke_method`
+- dump helpers such as `api::dump` and `api::dump_all_to`
+- wrappers such as `api::Application` and `api::Time`
+- metadata and object wrappers under `structs`
+
+## Supported Targets
+
+The project currently ships build targets for:
+
+- iOS: `aarch64-apple-ios`
+- macOS: `aarch64-apple-darwin`
+- Linux: `x86_64-unknown-linux-gnu`
+- Android: `aarch64-linux-android`
+- Windows: `x86_64-pc-windows-msvc`
+
+See [Platform and Runtime Notes](docs/platform-support.md) for symbol resolution details, target image naming guidance, and thread/runtime caveats.
 
 ## Contributing
 
-Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on reporting issues, submitting pull requests, and development setup.
+Contribution expectations and local development workflow are documented in [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 

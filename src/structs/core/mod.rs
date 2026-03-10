@@ -1,4 +1,13 @@
-//! IL2CPP Core types exports
+//! Core metadata and object wrappers.
+//!
+//! These types model the most important IL2CPP concepts used by the crate:
+//!
+//! - assemblies and images
+//! - classes, methods, fields, and properties
+//! - managed objects and value types
+//! - coroutine handles
+//!
+//! They are re-exported at [`crate::structs`] for a flatter public API.
 
 pub mod hierarchy;
 pub mod members;

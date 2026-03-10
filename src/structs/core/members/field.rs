@@ -3,7 +3,7 @@ use crate::api;
 use crate::structs::core::{Class, Type, ValueType};
 use std::ffi::c_void;
 
-/// Represents an IL2CPP Field (a variable within a class or struct)
+/// Hydrated IL2CPP field metadata plus optional bound instance state.
 #[derive(Debug, Clone)]
 pub struct Field {
     /// Pointer to the internal IL2CPP field structure
@@ -73,13 +73,10 @@ impl Field {
         )
     }
 
-    /// Reads the value of a field (static or instance)
+    /// Reads the current field value.
     ///
-    /// # Type Parameters
-    /// * `T` - The type to read into. Must be `Copy` and `'static`.
-    ///
-    /// # Returns
-    /// * `Result<T, String>` - The value read, or an error if reading fails
+    /// For instance fields, the field must have a bound instance pointer. Use
+    /// [`crate::structs::Object::field`] to obtain one.
     pub unsafe fn get_value<T: Copy + 'static>(&self) -> Result<T, String> {
         if self.is_static {
             if let Some(class) = self.class {
@@ -142,16 +139,10 @@ impl Field {
         }
     }
 
-    /// Writes a value to a field (static or instance)
+    /// Writes a value to the field.
     ///
-    /// # Type Parameters
-    /// * `T` - The type of value to write. Must be `Copy`.
-    ///
-    /// # Arguments
-    /// * `value` - The value to write to the field
-    ///
-    /// # Returns
-    /// * `Result<(), String>` - Ok if success, Err if failure
+    /// For instance fields, the field must have a bound instance pointer. Use
+    /// [`crate::structs::Object::field`] to obtain one.
     pub unsafe fn set_value<T: Copy>(&self, value: T) -> Result<(), String> {
         if self.is_static {
             api::field_static_set_value(self.address, &value as *const T as *mut c_void);

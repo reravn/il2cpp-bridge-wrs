@@ -1,3 +1,5 @@
+//! Assembly metadata wrapper.
+
 use crate::api::{self, cache, dump_assembly};
 use crate::logger;
 use crate::structs::core::Class;
@@ -5,7 +7,10 @@ use std::ffi::c_void;
 
 use super::image::Image;
 
-/// Represents an IL2CPP Assembly (e.g., Assembly-CSharp.dll loaded in memory)
+/// Represents a hydrated IL2CPP assembly.
+///
+/// In normal usage, values of this type come from [`crate::api::cache`] helper
+/// functions such as [`crate::api::cache::csharp`].
 #[derive(Debug, Clone)]
 pub struct Assembly {
     /// Wrapper for the image associated with this assembly
@@ -51,13 +56,11 @@ impl Assembly {
         s
     }
 
-    /// Finds a class by name within the assembly
+    /// Finds a class by name within the assembly.
     ///
-    /// # Arguments
-    /// * `name` - The full name of the class (e.g., "UnityEngine.GameObject")
-    ///
-    /// # Returns
-    /// * `Option<Class>` - The found class, or None if not found
+    /// Accepts either a fully qualified type name such as
+    /// `UnityEngine.GameObject` or an unqualified name for the global
+    /// namespace.
     pub fn class(&self, name: &str) -> Option<Class> {
         let (namespace, class_name) = if let Some(last_dot) = name.rfind('.') {
             (&name[..last_dot], &name[last_dot + 1..])
@@ -87,13 +90,9 @@ impl Assembly {
         None
     }
 
-    /// Dumps the assembly information (classes, methods, fields) to a file
+    /// Dumps this assembly into a C#-like pseudo-code file and returns `self`.
     ///
-    /// Use this for debugging purposes to inspect the assembly structure.
-    /// Requires the dump functionality to be implemented in `utils::dump_assembly`.
-    ///
-    /// # Returns
-    /// * `&Self` - Returns self for method chaining
+    /// This is mainly intended for debugging and offline inspection.
     pub fn dump(&self) -> &Self {
         if dump_assembly(Some(&self.name)).is_none() {
             logger::error("Failed to dump assembly");

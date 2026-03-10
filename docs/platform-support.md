@@ -1,75 +1,112 @@
-# Platform Support
+# Platform and Runtime Notes
 
-## Supported Platforms
+This page collects the platform-specific details and runtime caveats that matter when integrating `il2cpp-bridge-rs` into a live Unity process.
 
-| Platform | Target Triple | Status |
-|----------|--------------|--------|
+## Supported Targets
+
+| Platform | Target triple | Status |
+| --- | --- | --- |
 | iOS | `aarch64-apple-ios` | Primary target |
 | macOS | `aarch64-apple-darwin` | Supported |
 | Linux | `x86_64-unknown-linux-gnu` | Supported |
 | Android | `aarch64-linux-android` | Supported |
 | Windows | `x86_64-pc-windows-msvc` | Supported |
 
-## Platform-Specific APIs
+These target triples come directly from the repository `Makefile`.
 
-### Symbol Resolution (`memory::info::symbol`)
+## Symbol Resolution
 
-| Platform | API | Crate |
-|----------|-----|-------|
-| macOS/iOS | `dlsym` | `libc` |
-| Linux/Android | `dlsym` | `libc` |
-| Windows | `GetProcAddress` | `windows-sys` |
+The runtime resolves IL2CPP exports dynamically, using platform-specific APIs under `memory::info::symbol` and `memory::info::image`.
 
-### Image Base Address (`memory::info::image`)
+| Platform family | Export lookup | Image base lookup |
+| --- | --- | --- |
+| macOS / iOS | `dlsym` | `dyld` APIs |
+| Linux / Android | `dlsym` | `dl_iterate_phdr` |
+| Windows | `GetProcAddress` | `GetModuleHandleA` |
 
-| Platform | API | Crate |
-|----------|-----|-------|
-| macOS/iOS | `dyld` APIs | `mach2` |
-| Linux/Android | `dl_iterate_phdr` | `libc` |
-| Windows | `GetModuleHandleA` | `windows-sys` |
+## Choosing the Target Image
+
+`init(target_image, ...)` needs the name of the loaded binary used to compute image base and method addresses.
+
+Common values:
+
+- iOS: `UnityFramework`
+- many desktop Unity builds: `GameAssembly`
+- custom environments: the module exporting the IL2CPP symbols you are resolving
+
+If you get method RVA/VA values that look wrong, the first thing to question is the selected target image.
+
+## Thread Attachment Expectations
+
+The crate attaches the initialization worker thread automatically. Outside that path, you are responsible for attaching any thread that interacts with the IL2CPP runtime.
+
+Use `api::Thread` when:
+
+- dispatching work to your own background threads
+- running delayed callbacks after initialization
+- polling or invoking methods from an external event loop
+
+If a thread is not attached, lookups and invocations may fail or behave unpredictably.
 
 ## Build Commands
 
-A `Makefile` provides per-platform targets (`build-*`, `build-*-release`, `check-*`, `clippy-*`):
+Common targets from the `Makefile`:
 
 ```bash
-make build-ios            # aarch64-apple-ios (primary target)
-make build-ios-release    # Release build for iOS
-make build-macos          # aarch64-apple-darwin
-make build-linux          # x86_64-unknown-linux-gnu
-make build-android        # aarch64-linux-android
-make build-windows        # x86_64-pc-windows-msvc
-make check-ios            # Type-check for iOS
+make build
+make build-release
+make check
+make clippy
+make doc
 ```
 
-## Platform Dependencies
+Platform-specific builds:
 
-Dependencies are conditionally compiled per platform:
-
-```toml
-# All unix platforms
-[target.'cfg(unix)'.dependencies]
-libc = "0.2"
-
-# macOS and iOS only
-[target.'cfg(any(target_os = "macos", target_os = "ios"))'.dependencies]
-mach2 = "0.6.0"
-
-# Windows only
-[target.'cfg(windows)'.dependencies]
-windows-sys = { version = "0.61.2", features = ["Win32_System_LibraryLoader"] }
+```bash
+make build-ios
+make build-macos
+make build-linux
+make build-android
+make build-windows
 ```
 
-## Release Profile
+## Common Failure Modes
 
-The release profile is configured for maximum performance:
+### Initialization does not complete
 
-```toml
-[profile.release]
-opt-level = 3           # Maximum optimization
-lto = "fat"             # Full link-time optimization
-codegen-units = 1       # Single codegen unit for better optimization
-panic = "abort"         # No unwinding overhead
-strip = "debuginfo"     # Strip debug info
-overflow-checks = false # Disable overflow checks
-```
+Likely causes:
+
+- IL2CPP exports could not be resolved
+- the runtime domain was not ready yet
+- cache initialization failed repeatedly
+
+### Cache helpers panic
+
+Helpers like `cache::csharp()` and `cache::coremodule()` expect a hydrated cache. If they panic, initialization probably did not complete or the expected assembly is absent.
+
+### Method calls fail with argument or return errors
+
+Likely causes:
+
+- wrong overload selected
+- wrong Rust type requested from `Method::call`
+- reference-type vs value-type return shape mismatch
+- missing bound instance for an instance method
+
+### Object wrappers return null-related errors
+
+Likely causes:
+
+- underlying Unity object no longer exists
+- wrapper method was called on the wrong thread
+- the runtime returned a valid managed null even though the metadata lookup succeeded
+
+## Dependency Notes
+
+The platform split in `Cargo.toml` is:
+
+- `libc` on Unix targets
+- `mach2` on macOS and iOS
+- `windows-sys` on Windows
+
+Those dependencies are implementation details, but they matter when debugging platform-specific symbol or image-resolution issues.

@@ -1,14 +1,15 @@
-//! IL2CPP Thread attachment and management
+//! IL2CPP thread attachment and lifecycle helpers.
 use super::super::api;
 #[cfg(dev_release)]
 use crate::logger;
 use std::ffi::c_void;
 use std::ptr;
 
-/// Wrapper around an IL2CPP thread
+/// Wrapper around an IL2CPP VM thread attachment.
 ///
-/// This struct provides safe wrappers for IL2CPP thread attachment, detachment,
-/// and management. It supports RAII-style auto-detachment if configured.
+/// Use this type whenever your code touches IL2CPP from a thread that was not
+/// created by the crate's initialization flow. The common pattern is scoped
+/// attachment via [`Thread::attach`] with `auto_detach = true`.
 pub struct Thread {
     /// Pointer to the internal IL2CPP thread
     thread_ptr: *mut c_void,
@@ -75,13 +76,14 @@ impl Thread {
         }
     }
 
-    /// Attaches the current thread to the IL2CPP domain
+    /// Attaches the current OS thread to the IL2CPP domain.
     ///
-    /// # Arguments
-    /// * `auto_detach` - Whether to automatically detach the thread when the wrapper is dropped
+    /// If the thread is already attached, the existing thread handle is reused.
+    /// When `auto_detach` is `true`, dropping the returned value detaches the
+    /// thread automatically.
     ///
-    /// # Returns
-    /// * `Option<Self>` - The attached thread wrapper, or None if attachment failed
+    /// Returns `None` if the IL2CPP domain could not be resolved or the runtime
+    /// rejected the attachment request.
     pub fn attach(auto_detach: bool) -> Option<Self> {
         unsafe {
             if Self::is_attached() {

@@ -1,207 +1,144 @@
 # Getting Started
 
-## Installation
+This guide is for the first integration pass: loading the crate inside a process that already has Unity's IL2CPP runtime available, initializing the cache, and reaching the point where metadata lookups and method calls are reliable.
+
+## 1. Add the Crate
 
 ```bash
 cargo add il2cpp-bridge-rs
 ```
 
-## Building
-
-A `Makefile` is provided with per-platform targets (`build-*`, `build-*-release`, `check-*`, `clippy-*`):
+For local development of this repository, the common commands are:
 
 ```bash
-make build-ios          # iOS (aarch64-apple-ios) — primary target
-make build-macos        # macOS (aarch64-apple-darwin)
-make build-linux        # Linux (x86_64-unknown-linux-gnu)
-make build-android      # Android (aarch64-linux-android)
-make build-windows      # Windows (x86_64-pc-windows-msvc)
-make build-ios-release  # Release build for iOS
+make build
+make check
+make clippy
+make doc
 ```
 
-Run `make` with no arguments for a host-platform debug build. See the [README](../README.md#building) for the full list of targets.
+## 2. Understand the Runtime Model
 
-## Initialization
+`init(target_image, callback)` is the required entry point.
 
-Call `init()` with the target image name and a callback. The library spawns a background thread that:
+On the first call, the crate:
 
-1. Resolves IL2CPP exported symbols
-2. Loads the FFI function pointer table
-3. Attaches to the IL2CPP VM thread
-4. Builds the assembly/class/method cache
-5. Fires your callback
+1. resolves IL2CPP exports
+2. loads the function pointer table
+3. attaches the worker thread to the IL2CPP VM
+4. loads assemblies into the cache
+5. hydrates class metadata
+6. runs queued callbacks
+
+If `init` is called again while initialization is still running, the callback is queued. If it is called after initialization has completed, the callback is executed immediately on a newly spawned thread.
+
+If initialization fails, the state falls back to idle and no queued callback is run.
+
+## 3. Choose the Correct Target Image
+
+`target_image` is the loaded binary used to compute runtime image base and RVA/VA information.
+
+Common values:
+
+| Environment | Common image name |
+| --- | --- |
+| iOS Unity app | `UnityFramework` |
+| Desktop Unity player | `GameAssembly` |
+| Custom embedding/setup | The module exporting IL2CPP symbols |
+
+If you are unsure, inspect the loaded process modules and identify the image that contains the IL2CPP exports you want to resolve against.
+
+## 4. Initialize Once
 
 ```rust
-use il2cpp_bridge_rs::{init, api};
+use il2cpp_bridge_rs::{api, init};
 
-init("UnityFramework", || {
-    println!("IL2CPP ready!");
+init("GameAssembly", || {
+    let asm = api::cache::csharp();
+    println!("Assembly loaded: {}", asm.name);
 });
 ```
 
-The `target_image` parameter is the name of the loaded binary (e.g. `"UnityFramework"` on iOS, `"GameAssembly"` on desktop). It's used to compute RVA/VA addresses.
+This is runtime-dependent code. It is meant to show usage shape, not to run outside a live Unity IL2CPP process.
 
-Multiple calls to `init()` before completion queue callbacks. Calls after completion dispatch immediately.
+## 5. Start with Cache-Backed Lookups
 
-## Looking Up Classes
+Once initialization has completed, use `api::cache` helpers to reach the assemblies you care about:
 
 ```rust
 use il2cpp_bridge_rs::api::cache;
 
-// Get Assembly-CSharp (most game code lives here)
-let asm = cache::csharp();
-
-// Find a class by name
-if let Some(class) = asm.class("PlayerController") {
-    println!("Class: {} (namespace: {})", class.name, class.namespace);
-    println!("Fields: {}, Methods: {}", class.fields.len(), class.methods.len());
-}
-
-// Other common assemblies
-let mscorlib = cache::mscorlib();
+let game = cache::csharp();
 let core = cache::coremodule();
-
-// Any assembly by name
-let asm = cache::assembly("UnityEngine.UI");
+let corlib = cache::mscorlib();
+let ui = cache::assembly("UnityEngine.UI");
 ```
 
-## Finding Methods and Fields
+The cache is the normal entry point for metadata discovery. Avoid reimplementing assembly enumeration unless you are working on internals.
+
+## 6. Resolve a Class and Method
 
 ```rust
-if let Some(class) = asm.class("PlayerHealth") {
-    // Find a method
-    if let Some(method) = class.method("TakeDamage") {
-        println!("RVA: {:#x}, VA: {:#x}", method.rva, method.va);
-        println!("Static: {}, Params: {}", method.is_static, method.param_count);
+let player = game
+    .class("PlayerController")
+    .expect("class should exist");
 
-        for arg in &method.args {
-            println!("  param: {} ({})", arg.name, arg.type_info.name);
-        }
-    }
+let heal = player
+    .method(("Heal", ["System.Single"]))
+    .expect("Heal(float) should exist");
 
-    // Find a field
-    if let Some(field) = class.field("health") {
-        println!("Offset: {:#x}, Type: {}", field.offset, field.type_info.name);
-        println!("Static: {}, ReadOnly: {}", field.is_static, field.is_readonly);
-    }
-
-    // Properties (derived from get_/set_ method pairs)
-    for prop in &class.properties {
-        println!("Property: {} ({})", prop.name, prop.type_name);
-    }
-}
+println!("{}::{} -> RVA 0x{:X}", player.name, heal.name, heal.rva);
 ```
 
-## Invoking Methods
+Method selectors support:
 
-Use `Method::call<T>()` to invoke methods. It handles instance binding, argument validation, value type unboxing, and exception handling for you.
+- `"Name"` for simple lookup
+- `("Name", ["TypeA", "TypeB"])` for overload disambiguation by parameter type
+- `("Name", 2)` for overload disambiguation by parameter count
+
+## 7. Call Methods Carefully
+
+For static methods, call the method directly from the class.
+
+For instance methods, prefer `Object::method(...)` so the returned `Method` already has its `instance` pointer bound.
 
 ```rust
 use std::ffi::c_void;
 
-// Static method — call directly from a class lookup
-if let Some(method) = class.method("GetInstance") {
-    unsafe {
-        let player: Result<*mut c_void, _> = method.call(&[]);
-    }
-}
+if let Some(player_obj) = player.find_objects_of_type(false).into_iter().next() {
+    let take_damage = player_obj
+        .method(("TakeDamage", ["System.Single"]))
+        .expect("instance method should exist");
 
-// Instance method — use Object::method() to auto-bind the instance
-let obj = unsafe { Object::from_ptr(some_ptr) };
-if let Some(method) = obj.method("TakeDamage") {
-    let damage: f32 = 25.0;
+    let amount: f32 = 10.0;
     unsafe {
-        let result: Result<(), _> = method.call(&[
-            &damage as *const f32 as *mut c_void,
+        let _: Result<(), _> = take_damage.call(&[
+            &amount as *const f32 as *mut c_void,
         ]);
     }
 }
 ```
 
-Managed exceptions are caught automatically and returned as `Err(String)` with the exception message.
+Managed exceptions are converted into `Err(String)`. Argument count and return-shape mismatches are also validated.
 
-### Method Selectors
+## 8. Know When to Attach Threads
 
-When a class has overloaded methods, you can disambiguate with selectors:
+The initialization worker attaches itself to the IL2CPP VM. Outside that flow, you are responsible for thread attachment when doing runtime work on other threads.
 
-```rust
-// By name only
-class.method("Update")
-
-// By name + parameter type names
-class.method(("TakeDamage", &["System.Single"][..]))
-
-// By name + parameter count
-class.method(("TakeDamage", 1))
-```
-
-### Low-Level: `invoke_method`
-
-For cases where you already have raw pointers:
+Use `api::Thread::attach(true)` for scoped attachment:
 
 ```rust
-use il2cpp_bridge_rs::api::invoke_method;
+use il2cpp_bridge_rs::api::Thread;
 
-let result = invoke_method(method_ptr, obj_ptr, params_ptr);
+let _thread = Thread::attach(true);
 ```
 
-## Finding Objects in the Scene
+If you are building a background worker or callback system around this crate, thread attachment is a first-order concern, not an optional cleanup detail.
 
-Use `Class::find_objects_of_type` to query all live instances of a type, just like Unity's `FindObjectsOfType`.
+## 9. Move On to the Workflow Guides
 
-```rust
-let asm = api::cache::csharp();
-if let Some(class) = asm.class("PlayerController") {
-    // Find all active PlayerController instances
-    let players = class.find_objects_of_type(false);
-    println!("Found {} players", players.len());
+After you can initialize reliably, the next pages to read are:
 
-    // Call a method on each one
-    for player in &players {
-        if let Some(method) = player.method("Heal") {
-            let amount: f32 = 100.0;
-            unsafe {
-                let _: Result<(), _> = method.call(&[
-                    &amount as *const f32 as *mut c_void,
-                ]);
-            }
-        }
-    }
-
-    // Pass true to include inactive objects
-    let all_players = class.find_objects_of_type(true);
-}
-```
-
-You can also find a specific `GameObject` by name:
-
-```rust
-use il2cpp_bridge_rs::structs::GameObject;
-
-if let Ok(go) = GameObject::find("Player") {
-    println!("Found: {:?}", go);
-}
-```
-
-## Dumping Metadata
-
-```rust
-use il2cpp_bridge_rs::api;
-
-// Dump a single assembly
-if let Some(text) = api::dump("Assembly-CSharp") {
-    println!("{}", text);
-}
-
-// Dump all assemblies to a directory
-api::dump_all_to("/tmp/il2cpp_dump");
-```
-
-## Going Deeper
-
-This guide covers the most common workflows, but there's a lot more available. The best way to learn the full API is to read the source:
-
-- **`src/structs/`** — All type wrappers (`Class`, `Object`, `Method`, `Field`, `GameObject`, `Transform`, etc.) with their methods
-- **`src/api/wrappers/`** — Real-world usage patterns (e.g. `Application`, `Time`) that show how to combine lookups, method calls, and type conversions
-- **`src/api/core/`** — The caching layer, FFI bindings, and runtime internals
-- **`src/memory/`** — Low-level memory read/write and platform-specific symbol resolution
+- [Core Workflows](core-workflows.md)
+- [Platform and Runtime Notes](platform-support.md)
+- [API Map](api-reference.md)

@@ -16,7 +16,10 @@ pub struct Il2cppObject {
     pub monitor: *mut c_void,
 }
 
-/// Safe wrapper around Il2cppObject with convenience methods
+/// Safe-ish wrapper around a managed IL2CPP object pointer.
+///
+/// Use this type when you already have a live managed object and want
+/// instance-bound access to methods, fields, or properties.
 #[repr(transparent)]
 #[derive(Debug, Clone, Copy)]
 pub struct Object {
@@ -43,13 +46,11 @@ impl Object {
         self.ptr as *mut c_void
     }
 
-    /// Gets a field specific to this object instance
+    /// Returns an instance-bound field lookup.
     ///
-    /// # Arguments
-    /// * `name` - The name of the field to retrieve
-    ///
-    /// # Returns
-    /// * `Option<crate::structs::core::field::Field>` - The field if found, or None
+    /// The returned [`Field`] carries this object's instance pointer so
+    /// [`Field::get_value`](crate::structs::Field::get_value) and
+    /// [`Field::set_value`](crate::structs::Field::set_value) can operate on it.
     pub fn field(&self, name: &str) -> Option<Field> {
         let class_ptr = unsafe { api::object_get_class(self.as_ptr()) };
 
@@ -69,16 +70,10 @@ impl Object {
         }
     }
 
-    /// Gets a method specific to this object instance
+    /// Returns an instance-bound method lookup.
     ///
-    /// # Type Parameters
-    /// * `S` - A type that implements `MethodSelector`
-    ///
-    /// # Arguments
-    /// * `selector` - The selector to use for finding the method
-    ///
-    /// # Returns
-    /// * `Option<Method>` - The method if found, or None
+    /// This is the preferred way to prepare instance method calls because the
+    /// returned [`Method`] already carries the correct `this` pointer.
     pub fn method<S: MethodSelector>(&self, selector: S) -> Option<Method> {
         unsafe {
             let class_ptr = api::object_get_class(self.as_ptr());
@@ -94,13 +89,7 @@ impl Object {
         }
     }
 
-    /// Gets a property specific to this object instance
-    ///
-    /// # Arguments
-    /// * `name` - The name of the property to retrieve
-    ///
-    /// # Returns
-    /// * `Option<crate::structs::core::property::Property>` - The property if found, or None
+    /// Returns an instance-bound property lookup.
     pub fn property(&self, name: &str) -> Option<Property> {
         let class_ptr = unsafe { api::object_get_class(self.as_ptr()) };
 

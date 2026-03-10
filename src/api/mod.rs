@@ -1,13 +1,15 @@
-//! Utilities for interacting with IL2CPP
+//! User-facing IL2CPP runtime access.
 //!
-//! This module provides a collection of utilities for working with IL2CPP,
-//! including core functionality, debugging tools, and convenient wrappers.
+//! This module re-exports the crate's primary runtime entry points:
 //!
-//! # Modules
+//! - [`cache`] for assembly and metadata lookup
+//! - [`Thread`] for VM thread attachment
+//! - [`invoke_method`] for low-level method invocation
+//! - dump helpers such as [`dump`] and [`dump_all_to`]
+//! - thin Unity wrappers such as [`Application`] and [`Time`]
 //!
-//! * `core` - essential low-level utilities and type definitions
-//! * `debugging` - tools for analyzing and debugging IL2CPP applications
-//! * `wrappers` - high-level wrappers for common IL2CPP types and operations
+//! Most integrations should start here after calling [`crate::init`]. When you
+//! need richer metadata or object wrappers, move into [`crate::structs`].
 
 pub mod core;
 pub use core::api::*;

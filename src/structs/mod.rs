@@ -1,7 +1,15 @@
-//! IL2CPP struct definitions and submodules
+//! Metadata, object, collection, and wrapper types exposed by the crate.
 //!
-//! This module contains the core structure definitions for the IL2CPP interaction layer.
-//! It mirrors Unity's internal structures and provides safe wrappers where possible.
+//! The types in this module are the main building blocks once initialization
+//! has completed:
+//!
+//! - metadata wrappers such as [`Assembly`], [`Class`], [`Method`], and [`Field`]
+//! - runtime object wrappers such as [`Object`] and [`GameObject`]
+//! - Unity-oriented wrappers under [`components`]
+//! - collection and math helpers used by higher-level APIs
+//!
+//! Prefer starting from [`crate::api::cache`] to discover assemblies and classes,
+//! then move into these types for inspection, invocation, and object access.
 
 /// Collection types (List, Array, Dictionary, String)
 pub mod collections;

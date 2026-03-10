@@ -1,13 +1,14 @@
-//! Unity Application wrapper and utilities
+//! Thin wrapper around `UnityEngine.Application`.
 //!
-//! This module provides a safe wrapper around `UnityEngine.Application` methods,
-//! allowing access to application runtime data like paths, version, and platform.
+//! These helpers are useful for reading common runtime metadata such as version,
+//! bundle identifier, and persistent data path without repeating method lookup
+//! boilerplate.
 
 use crate::api::{cache, internals::Internals};
 use crate::structs::Il2cppString;
 use std::ffi::c_void;
 
-/// Wrapper for `UnityEngine.Application`
+/// Accessors for selected `UnityEngine.Application` properties.
 pub struct Application;
 
 impl Application {

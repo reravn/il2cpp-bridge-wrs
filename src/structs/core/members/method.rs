@@ -14,7 +14,7 @@ pub struct Arg {
     pub type_info: Type,
 }
 
-/// IL2CPP Method structure definition
+/// Hydrated IL2CPP method metadata plus optional bound instance state.
 #[derive(Debug, Clone)]
 pub struct Method {
     /// Pointer to the internal IL2CPP method structure
@@ -113,16 +113,19 @@ impl Method {
         )
     }
 
-    /// Invokes the method with the provided parameters
+    /// Invokes the method with the provided parameter pointers.
     ///
-    /// # Type Parameters
-    /// * `T` - The expected return type
+    /// For static methods, `self.instance` is ignored. For instance methods,
+    /// the method must either have been returned from `Object::method(...)` or
+    /// have its `instance` pointer set manually.
     ///
-    /// # Arguments
-    /// * `params` - A slice of raw pointers to the arguments
+    /// `T` must match the actual managed return shape:
     ///
-    /// # Returns
-    /// * `Result<T, String>` - The return value or an error
+    /// - use pointer-sized types for reference returns
+    /// - use the concrete value type for value-type returns
+    /// - use `()` for `void`
+    ///
+    /// Managed exceptions are converted into `Err(String)`.
     pub unsafe fn call<T: Copy>(&self, params: &[*mut c_void]) -> Result<T, String> {
         let instance = if self.is_static {
             ptr::null_mut()
