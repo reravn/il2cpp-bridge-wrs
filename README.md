@@ -6,6 +6,8 @@
 
 A high-performance Rust bridge to Unity's IL2CPP runtime. It resolves IL2CPP's exported C functions at runtime and wraps them in a safe, ergonomic API — letting you query types, invoke methods, and manipulate Unity objects directly from native code.
 
+![Code](docs/images/code.png)
+
 ### Why Rust?
 
 Built in Rust for maximum performance: zero-cost C FFI means no overhead on every IL2CPP call, no garbage collector or runtime competing with Unity's, and compile-time memory safety around the raw pointer operations that IL2CPP introspection demands. The result is a library that's as fast as hand-written C but significantly harder to misuse.
