@@ -1,7 +1,6 @@
 //! Initialization of the IL2CPP runtime and cache
 use crate::api::{self, cache, Thread};
 use crate::memory::symbol::resolve_symbol;
-use crate::structs::Il2cppString;
 use std::ffi::c_void;
 use std::sync::{Mutex, OnceLock};
 use std::thread;

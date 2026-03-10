@@ -6,7 +6,7 @@ description = "Rust library for Unity IL2CPP runtime introspection — resolve c
 license = "MIT"
 repository = "https://github.com/Batchhh/il2cpp-bridge-rs"
 keywords = ["il2cpp", "unity", "gamedev", "ffi", "memory", "game-modding", "reverse-engineering"]
-categories = ["external-ffi-bindings", "game-engines", "unity", "il2cpp"]
+categories = ["external-ffi-bindings", "game-engines"]
 
 [lib]
 path = "src/lib.rs"
