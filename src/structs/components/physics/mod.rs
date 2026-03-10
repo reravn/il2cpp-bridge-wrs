@@ -8,6 +8,7 @@
 
 pub mod collider;
 pub mod layer_mask;
+#[allow(clippy::module_inception)]
 pub mod physics;
 pub mod rigidbody;
 

@@ -2,8 +2,8 @@
 //!
 //! Provides access to the `UnityEngine.Time` class for time-related information.
 
-use crate::structs::core::Class;
 use crate::api::cache;
+use crate::structs::core::Class;
 use std::ffi::c_void;
 
 /// Wrapper for `UnityEngine.Time`
@@ -60,7 +60,7 @@ impl Time {
         unsafe {
             if let Some(method) = Self::get_class().and_then(|cls| cls.method(("set_timeScale", 1)))
             {
-                let _ = method.call::<c_void>(&[&mut (value as f32) as *mut f32 as *mut c_void]);
+                let _ = method.call::<c_void>(&[&mut { value } as *mut f32 as *mut c_void]);
             }
         }
     }

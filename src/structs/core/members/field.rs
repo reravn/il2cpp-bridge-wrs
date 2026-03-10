@@ -1,6 +1,6 @@
 //! IL2CPP Field definition and functionality
-use crate::structs::core::{Class, Type, ValueType};
 use crate::api;
+use crate::structs::core::{Class, Type, ValueType};
 use std::ffi::c_void;
 
 /// Represents an IL2CPP Field (a variable within a class or struct)
@@ -37,12 +37,18 @@ pub struct Field {
 unsafe impl Send for Field {}
 unsafe impl Sync for Field {}
 
+impl std::fmt::Display for Field {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.fmt_field())
+    }
+}
+
 impl Field {
     /// Generates a string representation of the field, including its value if static
     ///
     /// # Returns
     /// * `String` - The formatted string representation
-    pub fn to_string(&self) -> String {
+    fn fmt_field(&self) -> String {
         let access = self.get_attribute();
         let qualifier = if self.is_literal {
             "const ".to_string()
@@ -57,14 +63,12 @@ impl Field {
             s
         };
 
-        let value_str: Option<String> = None;
         format!(
-            "{} {}{} {}{}; // 0x{:X}",
+            "{} {}{} {}; // 0x{:X}",
             access,
             qualifier,
             self.type_info.cpp_name(),
             self.name,
-            value_str.unwrap_or_default(),
             self.offset
         )
     }
@@ -133,7 +137,7 @@ impl Field {
                 return Ok(std::ptr::read(&vt as *const _ as *const T));
             }
 
-            let address = instance as usize + self.offset as usize;  
+            let address = instance as usize + self.offset as usize;
             crate::memory::rw::read(address).map_err(|e| e.to_string())
         }
     }
@@ -173,7 +177,7 @@ impl Field {
             api::FIELD_ATTRIBUTE_FAMILY => "protected",
             api::FIELD_ATTRIBUTE_ASSEMBLY => "internal",
             api::FIELD_ATTRIBUTE_FAM_AND_ASSEM => "private protected",
-            api::FIELD_ATTRIBUTE_FAM_OR_ASSEM => "protected internal", 
+            api::FIELD_ATTRIBUTE_FAM_OR_ASSEM => "protected internal",
             _ => "private",
         }
     }

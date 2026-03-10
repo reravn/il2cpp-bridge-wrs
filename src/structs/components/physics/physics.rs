@@ -191,12 +191,12 @@ impl Physics {
                 let res = unsafe { method.call::<*mut c_void>(params) };
                 if let Ok(ptr) = res {
                     if !ptr.is_null() {
-                        let array_ptr = ptr
-                            as *mut crate::structs::collections::Il2cppArray<*mut c_void>;
+                        let array_ptr =
+                            ptr as *mut crate::structs::collections::Il2cppArray<*mut c_void>;
                         let mut colliders = Vec::new();
                         let len = unsafe { (*array_ptr).max_length };
                         for i in 0..len {
-                            let item_ptr = unsafe { (*array_ptr).at(i as usize) };
+                            let item_ptr = unsafe { (*array_ptr).at(i) };
                             if !item_ptr.is_null() {
                                 unsafe {
                                     colliders.push(Collider::from_ptr(item_ptr));
@@ -218,7 +218,7 @@ impl Physics {
     pub fn get_gravity() -> Vector3 {
         if let Some(class) = Self::get_class() {
             if let Some(method) = class.method("get_gravity") {
-                let res = unsafe { method.call::<Vector3>(&mut []) };
+                let res = unsafe { method.call::<Vector3>(&[]) };
                 return res.unwrap_or(Vector3::ZERO);
             }
         }

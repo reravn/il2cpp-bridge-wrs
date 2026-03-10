@@ -1,9 +1,9 @@
 //! Unity Object base wrapper
+use crate::api::cache;
 use crate::structs::components::Transform;
 use crate::structs::core::{Class, Il2cppObject, Object};
 use crate::structs::math::{Quaternion, Vector3};
 use crate::structs::Il2cppString;
-use crate::api::cache;
 use std::ffi::c_void;
 use std::ops::Deref;
 
@@ -54,7 +54,7 @@ impl UnityObject {
             let ptr = obj
                 .method("get_name")
                 .ok_or("Method 'get_name' not found")?
-                .call::<*mut Il2cppString>(&mut [])?;
+                .call::<*mut Il2cppString>(&[])?;
 
             if ptr.is_null() {
                 return Err("Name is null".to_string());
@@ -76,7 +76,7 @@ impl UnityObject {
             let ptr = obj
                 .method("ToString")
                 .ok_or("Method 'ToString' not found")?
-                .call::<*mut Il2cppString>(&mut [])?;
+                .call::<*mut Il2cppString>(&[])?;
 
             if ptr.is_null() {
                 return Err("String is null".to_string());
@@ -110,7 +110,7 @@ impl UnityObject {
                 .method(("Instantiate", 1))
                 .ok_or("Method 'Instantiate' not found")?;
 
-            let ptr = method.call::<*mut c_void>(&mut [original.as_ptr()])?;
+            let ptr = method.call::<*mut c_void>(&[original.as_ptr()])?;
 
             if ptr.is_null() {
                 return Err("Failed to instantiate object".to_string());
@@ -141,7 +141,7 @@ impl UnityObject {
                 .method(("Instantiate", 3))
                 .ok_or("Method 'Instantiate' not found")?;
 
-            let ptr = method.call::<*mut c_void>(&mut [
+            let ptr = method.call::<*mut c_void>(&[
                 original.as_ptr(),
                 &position as *const _ as *mut c_void,
                 &rotation as *const _ as *mut c_void,
@@ -174,8 +174,7 @@ impl UnityObject {
                 .method(("Instantiate", 2))
                 .ok_or("Method 'Instantiate' not found")?;
 
-            let ptr = method
-                .call::<*mut c_void>(&mut [original.as_ptr(), parent.as_ptr() as *mut c_void])?;
+            let ptr = method.call::<*mut c_void>(&[original.as_ptr(), parent.as_ptr()])?;
 
             if ptr.is_null() {
                 return Err("Failed to instantiate object".to_string());
@@ -200,8 +199,7 @@ impl UnityObject {
                 .method("Destroy")
                 .ok_or("Method 'Destroy' not found")?;
 
-            method
-                .call::<c_void>(&mut [self.as_ptr(), &time_delay as *const f32 as *mut c_void])?;
+            method.call::<c_void>(&[self.as_ptr(), &time_delay as *const f32 as *mut c_void])?;
             Ok(())
         }
     }
@@ -225,7 +223,7 @@ impl UnityObject {
                 .method("DestroyImmediate")
                 .ok_or("Method 'DestroyImmediate' not found")?;
 
-            method.call::<c_void>(&mut [
+            method.call::<c_void>(&[
                 obj.as_ptr(),
                 &allow_destroying_assets as *const bool as *mut c_void,
             ])?;
@@ -248,7 +246,7 @@ impl UnityObject {
                 .method("DontDestroyOnLoad")
                 .ok_or("Method 'DontDestroyOnLoad' not found")?;
 
-            method.call::<c_void>(&mut [obj.as_ptr()])?;
+            method.call::<c_void>(&[obj.as_ptr()])?;
             Ok(())
         }
     }

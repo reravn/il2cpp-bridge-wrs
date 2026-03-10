@@ -1,9 +1,9 @@
 //! Unity Camera component wrapper
 use super::screen::Screen;
+use crate::api::cache;
 use crate::structs::collections::Il2cppArray;
 use crate::structs::components::{Component, ComponentTrait};
 use crate::structs::math::{Matrix4x4, Ray, Vector2, Vector3};
-use crate::api::cache;
 use std::ffi::c_void;
 use std::ops::Deref;
 
@@ -119,7 +119,7 @@ impl Camera {
         unsafe {
             method.call::<i32>(&[array_ptr as *mut c_void])?;
 
-            let array = &*(array_ptr as *mut Il2cppArray<*mut c_void>);
+            let array = &*array_ptr;
             let mut cameras = Vec::with_capacity(count as usize);
             for i in 0..count as usize {
                 let ptr = array.at(i);

@@ -25,6 +25,12 @@ pub struct Property {
 unsafe impl Send for Property {}
 unsafe impl Sync for Property {}
 
+impl std::fmt::Display for Property {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.fmt_property())
+    }
+}
+
 impl Property {
     /// Creates a new Property from getter and/or setter methods
     pub fn from_methods(getter: Option<Method>, setter: Option<Method>) -> Option<Self> {
@@ -156,7 +162,7 @@ impl Property {
     }
 
     /// Generates a string representation of the property
-    pub fn to_string(&self) -> String {
+    fn fmt_property(&self) -> String {
         let static_prefix = if self.is_static { "static " } else { "" };
 
         let accessors = match (self.has_getter(), self.has_setter()) {

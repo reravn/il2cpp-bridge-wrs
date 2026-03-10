@@ -40,7 +40,7 @@ impl LayerMask {
         if let Some(class) = Self::get_class() {
             if let Some(method) = class.method("NameToLayer") {
                 let name_str = crate::structs::Il2cppString::new(name);
-                let res = unsafe { method.call::<i32>(&mut [name_str as *mut c_void]) };
+                let res = unsafe { method.call::<i32>(&[name_str as *mut c_void]) };
                 return res.unwrap_or(-1);
             }
         }
@@ -59,9 +59,9 @@ impl LayerMask {
             if let Some(method) = class.method("LayerToName") {
                 let mut layer_val = layer;
                 unsafe {
-                    let ptr = method.call::<*mut crate::structs::Il2cppString>(&mut [
-                        &mut layer_val as *mut i32 as *mut c_void,
-                    ]);
+                    let ptr = method.call::<*mut crate::structs::Il2cppString>(&[&mut layer_val
+                        as *mut i32
+                        as *mut c_void]);
                     if let Ok(ptr) = ptr {
                         if !ptr.is_null() {
                             return (*ptr).to_string().unwrap_or_default();
@@ -92,19 +92,13 @@ impl LayerMask {
                 >::new(&string_class, array_len as usize);
 
                 if !array.is_null() {
-                    let array_obj = unsafe {
-                        &mut *(array
-                            as *mut crate::structs::collections::Il2cppArray<
-                                *mut crate::structs::Il2cppString,
-                            >)
-                    };
+                    let array_obj = unsafe { &mut *array };
                     for (i, name) in layer_names.iter().enumerate() {
-                        let il2cpp_string =
-                            crate::structs::Il2cppString::new(name);
+                        let il2cpp_string = crate::structs::Il2cppString::new(name);
                         array_obj.set(i, il2cpp_string);
                     }
 
-                    let res = unsafe { method.call::<i32>(&mut [array as *mut c_void]) };
+                    let res = unsafe { method.call::<i32>(&[array as *mut c_void]) };
                     if let Ok(val) = res {
                         return LayerMask { value: val };
                     }

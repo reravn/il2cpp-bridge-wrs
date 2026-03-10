@@ -2,10 +2,10 @@
 use super::component::ComponentTrait;
 use super::transform::Transform;
 use super::unity_object::UnityObject;
+use crate::api::cache;
 use crate::structs::components::scene::scene_management::Scene;
 use crate::structs::core::{Class, Il2cppObject};
 use crate::structs::Il2cppString;
-use crate::api::cache;
 use std::ffi::c_void;
 use std::ops::Deref;
 
@@ -60,8 +60,7 @@ impl GameObject {
 
         unsafe {
             let name_str = Il2cppString::new(name);
-            create_method
-                .call::<()>(&mut [obj.as_ptr() as *mut c_void, name_str as *mut c_void])?;
+            create_method.call::<()>(&[obj.as_ptr(), name_str as *mut c_void])?;
             Ok(())
         }
     }
@@ -85,7 +84,7 @@ impl GameObject {
 
         unsafe {
             let name_str = Il2cppString::new(name);
-            let ptr = find_method.call::<*mut Il2cppObject>(&mut [name_str as *mut c_void])?;
+            let ptr = find_method.call::<*mut Il2cppObject>(&[name_str as *mut c_void])?;
 
             if ptr.is_null() {
                 return Err("GameObject not found".to_string());
@@ -117,7 +116,7 @@ impl GameObject {
             let ptr = self
                 .method(("GetComponent", ["System.Type"]))
                 .ok_or("Method 'GetComponent' not found")?
-                .call::<*mut c_void>(&[class.object as *mut c_void])?;
+                .call::<*mut c_void>(&[class.object])?;
 
             if ptr.is_null() {
                 return Err("Component not found".to_string());
@@ -136,7 +135,7 @@ impl GameObject {
             let ptr = self
                 .method("get_transform")
                 .ok_or("Method 'get_transform' not found")?
-                .call::<*mut Il2cppObject>(&mut [])?;
+                .call::<*mut Il2cppObject>(&[])?;
 
             if ptr.is_null() {
                 return Err("Transform is null".to_string());
@@ -154,7 +153,7 @@ impl GameObject {
         unsafe {
             self.method("get_activeSelf")
                 .ok_or("Method 'get_activeSelf' not found")?
-                .call::<bool>(&mut [])
+                .call::<bool>(&[])
         }
     }
 
@@ -166,7 +165,7 @@ impl GameObject {
         unsafe {
             self.method("get_activeInHierarchy")
                 .ok_or("Method 'get_activeInHierarchy' not found")?
-                .call::<bool>(&mut [])
+                .call::<bool>(&[])
         }
     }
 
@@ -182,7 +181,7 @@ impl GameObject {
             let mut arg = active;
             self.method("SetActive")
                 .ok_or("Method 'SetActive' not found")?
-                .call::<c_void>(&mut [&mut arg as *mut bool as *mut c_void])?;
+                .call::<c_void>(&[&mut arg as *mut bool as *mut c_void])?;
             Ok(())
         }
     }
@@ -195,7 +194,7 @@ impl GameObject {
         unsafe {
             self.method("get_layer")
                 .ok_or("Method 'get_layer' not found")?
-                .call::<i32>(&mut [])
+                .call::<i32>(&[])
         }
     }
 
@@ -211,7 +210,7 @@ impl GameObject {
             let mut arg = layer;
             self.method("set_layer")
                 .ok_or("Method 'set_layer' not found")?
-                .call::<c_void>(&mut [&mut arg as *mut i32 as *mut c_void])?;
+                .call::<c_void>(&[&mut arg as *mut i32 as *mut c_void])?;
             Ok(())
         }
     }
@@ -224,7 +223,7 @@ impl GameObject {
         unsafe {
             self.method("get_isStatic")
                 .ok_or("Method 'get_isStatic' not found")?
-                .call::<bool>(&mut [])
+                .call::<bool>(&[])
         }
     }
 
@@ -236,7 +235,7 @@ impl GameObject {
         unsafe {
             self.method("get_scene")
                 .ok_or("Method 'get_scene' not found")?
-                .call::<Scene>(&mut [])
+                .call::<Scene>(&[])
         }
     }
 }

@@ -1,8 +1,8 @@
 //! Assembly dumping functionality
-use crate::structs::Assembly;
 use crate::api::{cache, Application};
 #[cfg(dev_release)]
 use crate::logger;
+use crate::structs::Assembly;
 use std::fs::File;
 use std::io::{BufWriter, Write};
 use std::path::{Path, PathBuf};
@@ -11,7 +11,7 @@ use std::path::{Path, PathBuf};
 fn write_assembly(writer: &mut dyn Write, assembly: &Assembly) -> std::io::Result<()> {
     if !assembly.classes.is_empty() {
         for class in &assembly.classes {
-            writeln!(writer, "\n{}", class.to_string())?;
+            writeln!(writer, "\n{}", class)?;
         }
     }
     Ok(())
@@ -39,7 +39,10 @@ fn sorted_assemblies() -> Vec<std::sync::Arc<Assembly>> {
 
 /// Writes the `// Image N: foo.dll - startIndex` header block to any writer.
 /// The starting TypeDefIndex for each image is `min_token - 1` (tokens are 1-based).
-fn write_image_list(writer: &mut dyn Write, assemblies: &[std::sync::Arc<Assembly>]) -> std::io::Result<()> {
+fn write_image_list(
+    writer: &mut dyn Write,
+    assemblies: &[std::sync::Arc<Assembly>],
+) -> std::io::Result<()> {
     for (idx, assembly) in assemblies.iter().enumerate() {
         let start = assembly
             .classes
@@ -121,7 +124,6 @@ fn dump_assemblies_impl(base_path: Option<&str>, single_file_name: Option<&str>)
         #[cfg(dev_release)]
         logger::info(&format!("Dumped all assemblies to {:?}", path));
         Some(path.to_string_lossy().into_owned())
-
     } else {
         // Dump to separate files — each file still gets the full image list at the top
         for assembly in &assemblies {
@@ -153,7 +155,7 @@ fn dump_assemblies_impl(base_path: Option<&str>, single_file_name: Option<&str>)
                 ));
             }
 
-            if let Ok(_) = writer.flush() {
+            if writer.flush().is_ok() {
                 #[cfg(dev_release)]
                 logger::info(&format!("Successfully dumped assembly {}", assembly.name));
             }

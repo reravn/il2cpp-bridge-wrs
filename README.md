@@ -23,6 +23,21 @@ cargo add il2cpp-resolver-rs
 
 The source code is well-structured and the best way to understand the full API — dig into `src/structs/` for type wrappers, `src/api/` for runtime bindings and caching, and `src/api/wrappers/` for real-world usage patterns.
 
+## Building
+
+A `Makefile` is provided for convenience. Each platform has `build-*`, `build-*-release`, `check-*`, and `clippy-*` targets:
+
+| Platform | Build | Release | Check | Clippy |
+|----------|-------|---------|-------|--------|
+| Host | `make build` | `make build-release` | `make check` | `make clippy` |
+| iOS | `make build-ios` | `make build-ios-release` | `make check-ios` | `make clippy-ios` |
+| macOS | `make build-macos` | `make build-macos-release` | `make check-macos` | `make clippy-macos` |
+| Linux | `make build-linux` | `make build-linux-release` | `make check-linux` | `make clippy-linux` |
+| Android | `make build-android` | `make build-android-release` | `make check-android` | `make clippy-android` |
+| Windows | `make build-windows` | `make build-windows-release` | `make check-windows` | `make clippy-windows` |
+
+Utilities: `make doc` (generate and open docs), `make clean` (clean build artifacts).
+
 ## Platform Support
 
 | Platform | Target | Symbol Resolution | Image Base |

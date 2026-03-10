@@ -1,6 +1,6 @@
-use crate::structs::core::Class;
 use crate::api::{self, cache, dump_assembly};
 use crate::logger;
+use crate::structs::core::Class;
 use std::ffi::c_void;
 
 use super::image::Image;
@@ -23,6 +23,12 @@ pub struct Assembly {
 unsafe impl Send for Assembly {}
 unsafe impl Sync for Assembly {}
 
+impl std::fmt::Display for Assembly {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.fmt_assembly())
+    }
+}
+
 impl Assembly {
     /// Generates a string representation of the assembly
     ///
@@ -30,7 +36,7 @@ impl Assembly {
     ///
     /// # Returns
     /// * `String` - The formatted string representation
-    pub fn to_string(&self) -> String {
+    fn fmt_assembly(&self) -> String {
         let mut s = format!(
             "// Assembly: {} ({}) @ {:?}\n",
             self.name, self.file, self.address
@@ -38,7 +44,7 @@ impl Assembly {
 
         if !self.classes.is_empty() {
             for class in &self.classes {
-                s.push_str("\n");
+                s.push('\n');
                 s.push_str(&class.to_string());
             }
         }

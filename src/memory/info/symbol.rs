@@ -15,7 +15,7 @@ pub enum SymbolError {
     StringError,
 }
 
-static CACHE: Lazy<DashMap<String, usize>> = Lazy::new(|| DashMap::new());
+static CACHE: Lazy<DashMap<String, usize>> = Lazy::new(DashMap::new);
 
 /// Resolves a symbol to its address using platform-specific lookup.
 ///

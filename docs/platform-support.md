@@ -30,18 +30,16 @@
 
 ## Build Commands
 
+A `Makefile` provides per-platform targets (`build-*`, `build-*-release`, `check-*`, `clippy-*`):
+
 ```bash
-# iOS (primary target)
-cargo build --target aarch64-apple-ios
-cargo build --target aarch64-apple-ios --release
-
-# Host platform
-cargo build
-cargo build --release
-
-# Type-check without building
-cargo check
-cargo check --target aarch64-apple-ios
+make build-ios            # aarch64-apple-ios (primary target)
+make build-ios-release    # Release build for iOS
+make build-macos          # aarch64-apple-darwin
+make build-linux          # x86_64-unknown-linux-gnu
+make build-android        # aarch64-linux-android
+make build-windows        # x86_64-pc-windows-msvc
+make check-ios            # Type-check for iOS
 ```
 
 ## Platform Dependencies

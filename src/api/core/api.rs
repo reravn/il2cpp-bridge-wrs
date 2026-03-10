@@ -1,7 +1,7 @@
 //! IL2CPP Functions and Type Definitions
 use crate::logger;
 use once_cell::sync::OnceCell;
-use std::ffi::{c_char, c_int, c_void}; 
+use std::ffi::{c_char, c_int, c_void};
 use std::mem::transmute;
 
 macro_rules! define_il2cpp_functions {
@@ -20,7 +20,7 @@ macro_rules! define_il2cpp_functions {
         /// Structure holding function pointers to IL2CPP API functions
         ///
         /// This struct is initialized once and holds the raw function pointers
-        /// loaded dynamically. 
+        /// loaded dynamically.
         #[derive(Clone)]
         pub struct Il2CppFunctions {
             $(pub $name: $type_name),*

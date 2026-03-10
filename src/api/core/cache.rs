@@ -11,13 +11,13 @@ use std::sync::Arc;
 
 static CLASSES_HYDRATED: AtomicBool = AtomicBool::new(false);
 
-use crate::structs::{Arg, Assembly, Class, Field, Image, Method, Property, Type};
 use crate::memory::image;
+use crate::structs::{Arg, Assembly, Class, Field, Image, Method, Property, Type};
 
 /// Caches IL2CPP assemblies, classes, and methods
 pub struct Il2CppCache {
     /// Helper map of assembly names to Assembly structs (Arc for cheap cloning)
-    pub assemblies: DashMap<String, Arc<Assembly>>, 
+    pub assemblies: DashMap<String, Arc<Assembly>>,
     /// Helper map of class names to Class structs (boxed)
     pub classes: DashMap<String, Box<Class>>,
     /// Helper map of method keys to Method structs
@@ -28,7 +28,7 @@ unsafe impl Send for Il2CppCache {}
 unsafe impl Sync for Il2CppCache {}
 
 /// Global cache instance
-pub static CACHE: Lazy<Il2CppCache> = Lazy::new(|| Il2CppCache { 
+pub static CACHE: Lazy<Il2CppCache> = Lazy::new(|| Il2CppCache {
     assemblies: DashMap::new(),
     classes: DashMap::new(),
     methods: DashMap::new(),
@@ -162,7 +162,6 @@ pub fn ensure_hydrated() {
 ///
 /// Prefer [`ensure_hydrated`] which guards against redundant calls.
 pub fn hydrate_all_classes() {
-
     let assembly_names: Vec<String> = CACHE
         .assemblies
         .iter()
@@ -173,7 +172,7 @@ pub fn hydrate_all_classes() {
         let assembly_opt = CACHE
             .assemblies
             .get(&name)
-            .map(|entry| Arc::clone(&entry.value()));
+            .map(|entry| Arc::clone(entry.value()));
 
         if let Some(assembly) = assembly_opt {
             let mut classes = Vec::new();
@@ -413,9 +412,9 @@ unsafe fn hydrate_class(class_ptr: *mut c_void) -> Result<Class, String> {
         format!("{}.{}", namespace, name)
     };
 
-    archive_fields(&mut *class_box, class_ptr)?;
-    archive_methods(&mut *class_box, class_ptr, &full_class_name)?;
-    archive_properties(&mut *class_box);
+    archive_fields(&mut class_box, class_ptr)?;
+    archive_methods(&mut class_box, class_ptr, &full_class_name)?;
+    archive_properties(&mut class_box);
 
     let class_clone = (*class_box).clone();
 
@@ -508,8 +507,13 @@ unsafe fn archive_methods(
     class_ptr: *mut c_void,
     full_class_name: &str,
 ) -> Result<(), String> {
-    let image_base =
-        image::get_image_base(crate::init::TARGET_IMAGE_NAME.get().map(|s| s.as_str()).unwrap_or("")).unwrap_or(0);
+    let image_base = image::get_image_base(
+        crate::init::TARGET_IMAGE_NAME
+            .get()
+            .map(|s| s.as_str())
+            .unwrap_or(""),
+    )
+    .unwrap_or(0);
 
     let mut iter = ptr::null_mut();
     loop {
@@ -676,9 +680,13 @@ pub fn method_from_ptr(method_ptr: *mut c_void) -> Option<Method> {
 
         let function_ptr = *(method_ptr as *const *mut c_void);
 
-        let image_base =
-            image::get_image_base(crate::init::TARGET_IMAGE_NAME.get().map(|s| s.as_str()).unwrap_or(""))
-                .unwrap_or(0);
+        let image_base = image::get_image_base(
+            crate::init::TARGET_IMAGE_NAME
+                .get()
+                .map(|s| s.as_str())
+                .unwrap_or(""),
+        )
+        .unwrap_or(0);
         let mut rva = 0;
 
         if image_base > 0 && !function_ptr.is_null() {

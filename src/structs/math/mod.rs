@@ -1,4 +1,5 @@
 //! Math module exports
+#[allow(clippy::module_inception)]
 pub mod math;
 
 pub use math::{

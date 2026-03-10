@@ -88,14 +88,11 @@ impl Type {
 
         if !self.address.is_null() {
             unsafe {
-                let class_ptr =
-                    crate::api::class_from_type(self.address);
+                let class_ptr = crate::api::class_from_type(self.address);
                 if !class_ptr.is_null() {
-                    let name_ptr =
-                        crate::api::class_get_name(class_ptr);
+                    let name_ptr = crate::api::class_get_name(class_ptr);
                     if !name_ptr.is_null() {
-                        let raw =
-                            std::ffi::CStr::from_ptr(name_ptr).to_string_lossy();
+                        let raw = std::ffi::CStr::from_ptr(name_ptr).to_string_lossy();
                         return Self::format_class_name(&raw);
                     }
                 }

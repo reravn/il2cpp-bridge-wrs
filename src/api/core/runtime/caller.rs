@@ -61,7 +61,7 @@ pub fn invoke_method(
                 }
             } else {
                 let exc_object = Object::from_ptr(exc);
-                exc_object.to_string()
+                exc_object.il2cpp_to_string()
             };
 
             return Err(format!(

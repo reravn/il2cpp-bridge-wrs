@@ -61,7 +61,7 @@ impl Collider {
         unsafe {
             self.method("get_enabled")
                 .ok_or("Method 'get_enabled' not found")?
-                .call::<bool>(&mut [])
+                .call::<bool>(&[])
         }
     }
 
@@ -77,7 +77,7 @@ impl Collider {
             let mut value_cp = value;
             self.method("set_enabled")
                 .ok_or("Method 'set_enabled' not found")?
-                .call::<c_void>(&mut [&mut value_cp as *mut bool as *mut c_void])?;
+                .call::<c_void>(&[&mut value_cp as *mut bool as *mut c_void])?;
             Ok(())
         }
     }
@@ -90,7 +90,7 @@ impl Collider {
         unsafe {
             self.method("get_isTrigger")
                 .ok_or("Method 'get_isTrigger' not found")?
-                .call::<bool>(&mut [])
+                .call::<bool>(&[])
         }
     }
 
@@ -106,7 +106,7 @@ impl Collider {
             let mut value_cp = value;
             self.method("set_isTrigger")
                 .ok_or("Method 'set_isTrigger' not found")?
-                .call::<c_void>(&mut [&mut value_cp as *mut bool as *mut c_void])?;
+                .call::<c_void>(&[&mut value_cp as *mut bool as *mut c_void])?;
             Ok(())
         }
     }
@@ -120,7 +120,7 @@ impl Collider {
             let ptr = self
                 .method("get_attachedRigidbody")
                 .ok_or("Method 'get_attachedRigidbody' not found")?
-                .call::<*mut c_void>(&mut [])?;
+                .call::<*mut c_void>(&[])?;
 
             if ptr.is_null() {
                 return Err("No attached Rigidbody".to_string());
@@ -143,7 +143,7 @@ impl Collider {
             let result = self
                 .method("ClosestPoint")
                 .ok_or("Method 'ClosestPoint' not found")?
-                .call::<Vector3>(&mut [&mut pos_cp as *mut Vector3 as *mut c_void])?;
+                .call::<Vector3>(&[&mut pos_cp as *mut Vector3 as *mut c_void])?;
             Ok(result)
         }
     }

@@ -135,7 +135,7 @@ impl Thread {
 
             let mut threads = Vec::with_capacity(size);
             for i in 0..size {
-                let thread_ptr = *threads_ptr.offset(i as isize);
+                let thread_ptr = *threads_ptr.add(i);
                 if !thread_ptr.is_null() {
                     threads.push(Thread::from_ptr(thread_ptr, false));
                 }

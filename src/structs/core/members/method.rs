@@ -1,7 +1,7 @@
 //! IL2CPP Method definition and functionality
+use crate::api::{self, cache, invoke_method};
 use crate::structs::collections::Il2cppArray;
 use crate::structs::core::{Class, Object, Type};
-use crate::api::{self, cache, invoke_method};
 use std::ffi::c_void;
 use std::ptr;
 
@@ -56,13 +56,19 @@ pub struct Method {
 unsafe impl Send for Method {}
 unsafe impl Sync for Method {}
 
+impl std::fmt::Display for Method {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.fmt_method())
+    }
+}
+
 /// Implementation of Method operations
 impl Method {
     /// Generates a string representation of the method signature
     ///
     /// # Returns
     /// * `String` - The formatted method signature
-    pub fn to_string(&self) -> String {
+    fn fmt_method(&self) -> String {
         let access = self.get_attribute();
         let flags = self.flags;
 

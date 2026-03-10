@@ -1,6 +1,6 @@
+use crate::api::cache;
 use crate::structs::collections::Il2cppString;
 use crate::structs::core::Object;
-use crate::api::cache;
 use std::ffi::c_void;
 use std::ops::Deref;
 
@@ -52,7 +52,7 @@ impl Shader {
                         .ok()
                 })
                 .filter(|ptr| !ptr.is_null())
-                .map(|ptr| Self::from_ptr(ptr))
+                .map(Self::from_ptr)
         }
     }
 

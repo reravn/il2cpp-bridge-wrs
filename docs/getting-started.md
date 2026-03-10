@@ -6,6 +6,21 @@
 cargo add il2cpp-resolver-rs
 ```
 
+## Building
+
+A `Makefile` is provided with per-platform targets (`build-*`, `build-*-release`, `check-*`, `clippy-*`):
+
+```bash
+make build-ios          # iOS (aarch64-apple-ios) — primary target
+make build-macos        # macOS (aarch64-apple-darwin)
+make build-linux        # Linux (x86_64-unknown-linux-gnu)
+make build-android      # Android (aarch64-linux-android)
+make build-windows      # Windows (x86_64-pc-windows-msvc)
+make build-ios-release  # Release build for iOS
+```
+
+Run `make` with no arguments for a host-platform debug build. See the [README](../README.md#building) for the full list of targets.
+
 ## Initialization
 
 Call `init()` with the target image name and a callback. The library spawns a background thread that:

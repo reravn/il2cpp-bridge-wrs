@@ -1,6 +1,6 @@
 //! IL2CPP Image definition
-use crate::structs::core::Class;
 use crate::api::{self, cache};
+use crate::structs::core::Class;
 use std::ffi::c_void;
 
 use super::assembly::Assembly;
@@ -37,7 +37,7 @@ impl Image {
 
             for entry in cache::CACHE.assemblies.iter() {
                 if entry.value().address == assembly_ptr {
-                    return Some(std::sync::Arc::clone(&entry.value()));
+                    return Some(std::sync::Arc::clone(entry.value()));
                 }
             }
             None

@@ -4,12 +4,23 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Build Commands
 
+A `Makefile` wraps common cargo commands:
+
 ```bash
-cargo build                                  # Build for host platform (debug)
-cargo build --target aarch64-apple-ios       # Build for iOS
-cargo build --release                        # Build for host platform (release)
-cargo check                                  # Type-check without building
-cargo check --target aarch64-apple-ios       # Type-check for iOS
+make build                # Build for host platform (debug)
+make build-release        # Release build for host platform
+
+# Per-platform: build-*, build-*-release, check-*, clippy-*
+make build-ios            # aarch64-apple-ios (primary target)
+make build-macos          # aarch64-apple-darwin
+make build-linux          # x86_64-unknown-linux-gnu
+make build-android        # aarch64-linux-android
+make build-windows        # x86_64-pc-windows-msvc
+
+make check                # Type-check (host)
+make clippy               # Lint (host)
+make doc                  # Generate and open docs
+make clean                # Clean build artifacts
 ```
 
 No test suite exists. No linter configuration beyond `cargo clippy`.

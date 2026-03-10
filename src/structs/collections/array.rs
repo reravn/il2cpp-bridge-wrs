@@ -1,6 +1,6 @@
 //! IL2CPP Array definition and operations
-use crate::structs::core::Class;
 use crate::api;
+use crate::structs::core::Class;
 use std::ffi::c_void;
 use std::marker::PhantomData;
 
@@ -108,12 +108,12 @@ impl<T: Copy> Il2cppArray<T> {
             }
 
             let new_size = self.max_length - index;
-            for i in 0..new_size {
-                self.set(i + index, arr[i]);
+            for (i, &item) in arr.iter().enumerate().take(new_size) {
+                self.set(i + index, item);
             }
         } else {
-            for i in 0..size {
-                self.set(i + index, arr[i]);
+            for (i, &item) in arr.iter().enumerate().take(size) {
+                self.set(i + index, item);
             }
         }
     }

@@ -1,13 +1,13 @@
 //! Unity SceneManager and Scene component wrapper
+use crate::logger;
 use crate::{
+    api::cache,
     structs::{
         collections::{Il2cppArray, Il2cppString},
         components::GameObject,
         core::Class,
     },
-    api::cache,
 };
-use crate::logger;
 use std::ffi::c_void;
 
 #[repr(C)]
@@ -162,7 +162,7 @@ impl Scene {
                 return Vec::new();
             }
 
-            let array_ptr = ptr as *mut Il2cppArray<*mut c_void>;
+            let array_ptr = ptr;
             let mut objects = Vec::new();
             let array = &*array_ptr;
 

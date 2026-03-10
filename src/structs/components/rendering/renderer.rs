@@ -96,7 +96,7 @@ impl Renderer {
                 .to_vector()
                 .into_iter()
                 .filter(|&p| !p.is_null())
-                .map(|p| Material::from_ptr(p))
+                .map(Material::from_ptr)
                 .collect())
         }
     }

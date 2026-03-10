@@ -1,7 +1,7 @@
 //! IL2CPP ValueType wrapper and operations
 use super::class::MethodSelector;
-use crate::structs::core::Method;
 use crate::api::{self, cache};
+use crate::structs::core::Method;
 use std::ffi::c_void;
 
 /// Represents an IL2CPP ValueType (struct) instance
@@ -142,12 +142,10 @@ impl ValueType {
             return None;
         }
 
-        match cache::class_from_ptr(klass) {
-            Some(class) => match class.property(name) {
-                Some(prop) => Some(prop.with_instance(self.as_ptr())),
-                None => None,
-            },
-            None => None,
-        }
+        cache::class_from_ptr(klass).and_then(|class| {
+            class
+                .property(name)
+                .map(|prop| prop.with_instance(self.as_ptr()))
+        })
     }
 }

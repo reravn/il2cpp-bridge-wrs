@@ -1,9 +1,9 @@
 //! IL2CPP Object wrapper and operations
 use super::class::MethodSelector;
+use crate::api::{self, cache};
 use crate::structs::components::GameObject;
 use crate::structs::core::{Class, Field, Method, Property};
 use crate::structs::Il2cppString;
-use crate::api::{self, cache};
 use std::ffi::c_void;
 
 /// Low-level IL2CPP Object structure (matches C layout)
@@ -108,20 +108,18 @@ impl Object {
             return None;
         }
 
-        match cache::class_from_ptr(class_ptr) {
-            Some(class) => match class.property(name) {
-                Some(prop) => Some(prop.with_instance(self.as_ptr())),
-                None => None,
-            },
-            None => None,
-        }
+        cache::class_from_ptr(class_ptr).and_then(|class| {
+            class
+                .property(name)
+                .map(|prop| prop.with_instance(self.as_ptr()))
+        })
     }
 
     /// Calls ToString on the object
     ///
     /// # Returns
     /// * `String` - The string representation, or "null" if failed
-    pub fn to_string(&self) -> String {
+    pub fn il2cpp_to_string(&self) -> String {
         unsafe {
             if let Some(method) = self.method("ToString") {
                 if let Ok(result) = method.call::<*mut Il2cppString>(&[]) {

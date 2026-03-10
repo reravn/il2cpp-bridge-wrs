@@ -3,8 +3,8 @@
 //! This module provides a safe wrapper around `UnityEngine.Application` methods,
 //! allowing access to application runtime data like paths, version, and platform.
 
-use crate::structs::Il2cppString;
 use crate::api::{cache, internals::Internals};
+use crate::structs::Il2cppString;
 use std::ffi::c_void;
 
 /// Wrapper for `UnityEngine.Application`

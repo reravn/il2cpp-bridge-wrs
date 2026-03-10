@@ -96,10 +96,8 @@ impl Material {
             let string_new_ptr = Il2cppString::new(name);
             self.method(("SetFloat", 2))
                 .ok_or("Method 'SetFloat' not found")?
-                .call::<c_void>(&[
-                    string_new_ptr as *mut c_void,
-                    &mut (value as f32) as *mut f32 as *mut c_void,
-                ])?;
+                .call::<c_void>(&[string_new_ptr as *mut c_void, &mut { value } as *mut f32
+                    as *mut c_void])?;
         }
         Ok(())
     }
@@ -117,10 +115,8 @@ impl Material {
             let string_new_ptr = Il2cppString::new(name);
             self.method(("SetInt", 2))
                 .ok_or("Method 'SetInt' not found")?
-                .call::<c_void>(&[
-                    string_new_ptr as *mut c_void,
-                    &mut (value as i32) as *mut i32 as *mut c_void,
-                ])?;
+                .call::<c_void>(&[string_new_ptr as *mut c_void, &mut { value } as *mut i32
+                    as *mut c_void])?;
         }
         Ok(())
     }

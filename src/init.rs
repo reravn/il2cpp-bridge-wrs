@@ -55,7 +55,7 @@ where
     match &mut *guard {
         State::Done => {
             drop(guard);
-            std::thread::spawn(move || on_complete());
+            std::thread::spawn(on_complete);
         }
         State::Running(callbacks) => {
             callbacks.push(Box::new(on_complete));
@@ -104,7 +104,7 @@ where
                 if cache_ready {
                     #[cfg(dev_release)]
                     logger::info("Cache ready, starting hooks...");
-                    
+
                     let callbacks = {
                         let mut guard = STATE.lock().unwrap();
                         let old = std::mem::replace(&mut *guard, State::Done);
@@ -113,9 +113,9 @@ where
                             _ => vec![],
                         }
                     };
-                    
+
                     cache::ensure_hydrated();
-                    
+
                     std::thread::spawn(move || {
                         for cb in callbacks {
                             cb();

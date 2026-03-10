@@ -10,11 +10,11 @@
 //! * `wrappers` - high-level wrappers for common IL2CPP types and operations
 
 pub mod core;
-pub use core::internals::{self, Internals};
-pub use core::thread::Thread;
 pub use core::api::*;
 pub use core::cache;
 pub use core::caller::invoke_method;
+pub use core::internals::{self, Internals};
+pub use core::thread::Thread;
 
 pub mod debugging;
 

@@ -113,7 +113,7 @@ impl Component {
             let ptr = self
                 .method(("GetComponent", ["System.Type"]))
                 .ok_or("Method 'GetComponent' not found")?
-                .call::<*mut c_void>(&[class.object as *mut c_void])?;
+                .call::<*mut c_void>(&[class.object])?;
 
             if ptr.is_null() {
                 return Err("Component not found".to_string());

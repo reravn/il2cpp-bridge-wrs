@@ -52,7 +52,7 @@ impl Transform {
             let ptr = obj
                 .method("get_gameObject")
                 .ok_or("Method 'get_gameObject' not found")?
-                .call::<*mut c_void>(&mut [])?;
+                .call::<*mut c_void>(&[])?;
 
             if ptr.is_null() {
                 return Err("Transform.gameObject is null".to_string());
@@ -71,7 +71,7 @@ impl Transform {
             let obj = Object::from_ptr(self.as_ptr());
             obj.method("get_position")
                 .ok_or("Method 'get_position' not found")?
-                .call::<Vector3>(&mut [])
+                .call::<Vector3>(&[])
         }
     }
 
@@ -85,10 +85,10 @@ impl Transform {
     pub fn set_position(&self, value: Vector3) -> Result<(), String> {
         unsafe {
             let obj = Object::from_ptr(self.as_ptr());
-            let mut params = [&value as *const Vector3 as *mut c_void];
+            let params = [&value as *const Vector3 as *mut c_void];
             obj.method("set_position")
                 .ok_or("Method 'set_position' not found")?
-                .call::<()>(&mut params)
+                .call::<()>(&params)
         }
     }
 
@@ -101,7 +101,7 @@ impl Transform {
             let obj = Object::from_ptr(self.as_ptr());
             obj.method("get_localPosition")
                 .ok_or("Method 'get_localPosition' not found")?
-                .call::<Vector3>(&mut [])
+                .call::<Vector3>(&[])
         }
     }
 
@@ -115,10 +115,10 @@ impl Transform {
     pub fn set_local_position(&self, value: Vector3) -> Result<(), String> {
         unsafe {
             let obj = Object::from_ptr(self.as_ptr());
-            let mut params = [&value as *const Vector3 as *mut c_void];
+            let params = [&value as *const Vector3 as *mut c_void];
             obj.method("set_localPosition")
                 .ok_or("Method 'set_localPosition' not found")?
-                .call::<()>(&mut params)
+                .call::<()>(&params)
         }
     }
 
@@ -131,7 +131,7 @@ impl Transform {
             let obj = Object::from_ptr(self.as_ptr());
             obj.method("get_rotation")
                 .ok_or("Method 'get_rotation' not found")?
-                .call::<Quaternion>(&mut [])
+                .call::<Quaternion>(&[])
         }
     }
 
@@ -145,10 +145,10 @@ impl Transform {
     pub fn set_rotation(&self, value: Quaternion) -> Result<(), String> {
         unsafe {
             let obj = Object::from_ptr(self.as_ptr());
-            let mut params = [&value as *const Quaternion as *mut c_void];
+            let params = [&value as *const Quaternion as *mut c_void];
             obj.method("set_rotation")
                 .ok_or("Method 'set_rotation' not found")?
-                .call::<()>(&mut params)
+                .call::<()>(&params)
         }
     }
 
@@ -161,7 +161,7 @@ impl Transform {
             let obj = Object::from_ptr(self.as_ptr());
             obj.method("get_localRotation")
                 .ok_or("Method 'get_localRotation' not found")?
-                .call::<Quaternion>(&mut [])
+                .call::<Quaternion>(&[])
         }
     }
 
@@ -175,10 +175,10 @@ impl Transform {
     pub fn set_local_rotation(&self, value: Quaternion) -> Result<(), String> {
         unsafe {
             let obj = Object::from_ptr(self.as_ptr());
-            let mut params = [&value as *const Quaternion as *mut c_void];
+            let params = [&value as *const Quaternion as *mut c_void];
             obj.method("set_localRotation")
                 .ok_or("Method 'set_localRotation' not found")?
-                .call::<()>(&mut params)
+                .call::<()>(&params)
         }
     }
 
@@ -191,7 +191,7 @@ impl Transform {
             let obj = Object::from_ptr(self.as_ptr());
             obj.method("get_localScale")
                 .ok_or("Method 'get_localScale' not found")?
-                .call::<Vector3>(&mut [])
+                .call::<Vector3>(&[])
         }
     }
 
@@ -205,10 +205,10 @@ impl Transform {
     pub fn set_local_scale(&self, value: Vector3) -> Result<(), String> {
         unsafe {
             let obj = Object::from_ptr(self.as_ptr());
-            let mut params = [&value as *const Vector3 as *mut c_void];
+            let params = [&value as *const Vector3 as *mut c_void];
             obj.method("set_localScale")
                 .ok_or("Method 'set_localScale' not found")?
-                .call::<()>(&mut params)
+                .call::<()>(&params)
         }
     }
 
@@ -221,7 +221,7 @@ impl Transform {
             let obj = Object::from_ptr(self.as_ptr());
             obj.method("get_lossyScale")
                 .ok_or("Method 'get_lossyScale' not found")?
-                .call::<Vector3>(&mut [])
+                .call::<Vector3>(&[])
         }
     }
 
@@ -233,7 +233,7 @@ impl Transform {
         unsafe {
             let obj = Object::from_ptr(self.as_ptr());
             if let Some(method) = obj.method("get_childCount") {
-                return method.call::<i32>(&mut []).unwrap_or(0);
+                return method.call::<i32>(&[]).unwrap_or(0);
             }
             0
         }
@@ -249,11 +249,11 @@ impl Transform {
     pub fn get_child(&self, index: i32) -> Result<Transform, String> {
         unsafe {
             let obj = Object::from_ptr(self.as_ptr());
-            let mut params = [&index as *const i32 as *mut c_void];
+            let params = [&index as *const i32 as *mut c_void];
             let ptr = obj
                 .method(("GetChild", ["System.Int32"]))
                 .ok_or("Method 'GetChild' not found")?
-                .call::<*mut c_void>(&mut params)?;
+                .call::<*mut c_void>(&params)?;
 
             if ptr.is_null() {
                 return Err("Child is null".to_string());

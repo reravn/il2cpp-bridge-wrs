@@ -113,7 +113,7 @@ impl Rigidbody {
         unsafe {
             let mut force_cp = force;
             let mut mode_cp = mode as i32;
-            let params = &mut [
+            let params = &[
                 &mut force_cp as *mut Vector3 as *mut c_void,
                 &mut mode_cp as *mut i32 as *mut c_void,
             ];
@@ -132,7 +132,7 @@ impl Rigidbody {
         unsafe {
             self.method("get_mass")
                 .ok_or("Method 'get_mass' not found")?
-                .call::<f32>(&mut [])
+                .call::<f32>(&[])
         }
     }
 
@@ -148,7 +148,7 @@ impl Rigidbody {
             let mut value_cp = value;
             self.method("set_mass")
                 .ok_or("Method 'set_mass' not found")?
-                .call::<c_void>(&mut [&mut value_cp as *mut f32 as *mut c_void])?;
+                .call::<c_void>(&[&mut value_cp as *mut f32 as *mut c_void])?;
             Ok(())
         }
     }
@@ -161,7 +161,7 @@ impl Rigidbody {
         unsafe {
             self.method("get_drag")
                 .ok_or("Method 'get_drag' not found")?
-                .call::<f32>(&mut [])
+                .call::<f32>(&[])
         }
     }
 
@@ -177,7 +177,7 @@ impl Rigidbody {
             let mut value_cp = value;
             self.method("set_drag")
                 .ok_or("Method 'set_drag' not found")?
-                .call::<c_void>(&mut [&mut value_cp as *mut f32 as *mut c_void])?;
+                .call::<c_void>(&[&mut value_cp as *mut f32 as *mut c_void])?;
             Ok(())
         }
     }
@@ -190,7 +190,7 @@ impl Rigidbody {
         unsafe {
             self.method("get_angularDrag")
                 .ok_or("Method 'get_angularDrag' not found")?
-                .call::<f32>(&mut [])
+                .call::<f32>(&[])
         }
     }
 
@@ -206,7 +206,7 @@ impl Rigidbody {
             let mut value_cp = value;
             self.method("set_angularDrag")
                 .ok_or("Method 'set_angularDrag' not found")?
-                .call::<c_void>(&mut [&mut value_cp as *mut f32 as *mut c_void])?;
+                .call::<c_void>(&[&mut value_cp as *mut f32 as *mut c_void])?;
             Ok(())
         }
     }
@@ -219,7 +219,7 @@ impl Rigidbody {
         unsafe {
             self.method("get_isKinematic")
                 .ok_or("Method 'get_isKinematic' not found")?
-                .call::<bool>(&mut [])
+                .call::<bool>(&[])
         }
     }
 
@@ -235,7 +235,7 @@ impl Rigidbody {
             let mut value_cp = value;
             self.method("set_isKinematic")
                 .ok_or("Method 'set_isKinematic' not found")?
-                .call::<c_void>(&mut [&mut value_cp as *mut bool as *mut c_void])?;
+                .call::<c_void>(&[&mut value_cp as *mut bool as *mut c_void])?;
             Ok(())
         }
     }
@@ -248,7 +248,7 @@ impl Rigidbody {
         unsafe {
             self.method("get_useGravity")
                 .ok_or("Method 'get_useGravity' not found")?
-                .call::<bool>(&mut [])
+                .call::<bool>(&[])
         }
     }
 
@@ -264,7 +264,7 @@ impl Rigidbody {
             let mut value_cp = value;
             self.method("set_useGravity")
                 .ok_or("Method 'set_useGravity' not found")?
-                .call::<c_void>(&mut [&mut value_cp as *mut bool as *mut c_void])?;
+                .call::<c_void>(&[&mut value_cp as *mut bool as *mut c_void])?;
             Ok(())
         }
     }

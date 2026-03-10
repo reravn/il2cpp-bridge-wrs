@@ -1,6 +1,6 @@
+use crate::api::{self, cache};
 use crate::structs::collections::Il2cppArray;
 use crate::structs::core::{Field, Method, Property};
-use crate::api::{self, cache};
 use std::ffi::c_void;
 use std::sync::Arc;
 
@@ -124,12 +124,18 @@ impl MethodSelector for (&str, usize) {
     }
 }
 
+impl std::fmt::Display for Class {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.dump_string())
+    }
+}
+
 impl Class {
     /// Generates a string representation of the class, including fields and methods
     ///
     /// # Returns
     /// * `String` - The formatted string dump of the class
-    pub fn to_string(&self) -> String {
+    pub fn dump_string(&self) -> String {
         let mut s = String::new();
 
         // Header comment: // Namespace: <ns> — <dll>
@@ -150,13 +156,20 @@ impl Class {
         };
 
         match (!ns_part.is_empty(), !dll_part.is_empty()) {
-            (true, true) => s.push_str(&format!("// Namespace: {} \u{2014} {}\n", ns_part, dll_part)),
+            (true, true) => s.push_str(&format!(
+                "// Namespace: {} \u{2014} {}\n",
+                ns_part, dll_part
+            )),
             (true, false) => s.push_str(&format!("// Namespace: {}\n", ns_part)),
             (false, true) => s.push_str(&format!("// Image: {}\n", dll_part)),
             (false, false) => {}
         }
 
-        let abstract_kw = if self.is_abstract && !self.is_interface { "abstract " } else { "" };
+        let abstract_kw = if self.is_abstract && !self.is_interface {
+            "abstract "
+        } else {
+            ""
+        };
 
         let type_kw = if self.is_enum {
             "enum"
@@ -215,7 +228,7 @@ impl Class {
         if !self.fields.is_empty() {
             s.push_str("    // Fields\n");
             for field in &self.fields {
-                s.push_str(&format!("    {}\n", field.to_string()));
+                s.push_str(&format!("    {}\n", field));
             }
         }
 
@@ -226,7 +239,7 @@ impl Class {
             }
             s.push_str("    // Properties\n");
             for prop in &self.properties {
-                s.push_str(&format!("    {}\n", prop.to_string()));
+                s.push_str(&format!("    {}\n", prop));
             }
         }
 
@@ -259,9 +272,7 @@ impl Class {
 
         // Methods section
         if !regular_methods.is_empty() {
-            if constructors.is_empty()
-                && (!self.fields.is_empty() || !self.properties.is_empty())
-            {
+            if constructors.is_empty() && (!self.fields.is_empty() || !self.properties.is_empty()) {
                 s.push('\n');
             }
             s.push_str("    // Methods\n");
@@ -403,7 +414,7 @@ impl Class {
                         if array.is_null() {
                             return Vec::new();
                         }
-                        (*array).to_vector().into_iter().map(|ptr| ptr).collect()
+                        (*array).to_vector().into_iter().collect()
                     }
                     Err(_) => Vec::new(),
                 }
