@@ -5,7 +5,7 @@ edition = "2021"
 description = "Rust library for Unity IL2CPP runtime introspection — resolve classes, invoke methods, and interact with the IL2CPP VM at runtime"
 license = "MIT"
 repository = "https://github.com/Batchhh/il2cpp-bridge-rs"
-keywords = ["il2cpp", "unity", "gamedev", "ffi", "memory", "game-modding", "reverse-engineering"]
+keywords = ["il2cpp", "unity", "gamedev", "game-modding", "reverse-engineering"]
 categories = ["external-ffi-bindings", "game-engines"]
 
 [lib]
