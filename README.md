@@ -1,8 +1,6 @@
 # il2cpp-bridge-rs
 
 <a href="https://crates.io/crates/il2cpp-bridge-rs"><img src="https://img.shields.io/crates/v/il2cpp-bridge-rs?style=for-the-badge" alt="Crates.io"></a>
-<a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-222?style=for-the-badge&logoColor=white" alt="License"></a>
-<a href="https://www.rust-lang.org"><img src="https://img.shields.io/badge/rust-1.70+-222?style=for-the-badge&logo=rust&logoColor=white" alt="Rust"></a>
 <a href="#supported-targets"><img src="https://img.shields.io/badge/platform-iOS%20%C2%B7%20macOS%20%C2%B7%20Linux%20%C2%B7%20Android%20%C2%B7%20Windows-222?style=for-the-badge&logoColor=white" alt="Platform"></a>
 
 `il2cpp-bridge-rs` is a Rust library for exploring and interacting with Unity's IL2CPP runtime from native code. It resolves IL2CPP exports at runtime, builds a metadata cache, and exposes ergonomic wrappers for common tasks such as class lookup, method invocation, metadata dumping, and Unity object access.
