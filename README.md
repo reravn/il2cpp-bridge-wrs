@@ -130,6 +130,9 @@ See [Platform and Runtime Notes](docs/platform-support.md) for symbol resolution
 
 Contribution expectations and local development workflow are documented in [CONTRIBUTING.md](CONTRIBUTING.md).
 
+# Legal Disclaimer
+This library is provided strictly for educational and research purposes. It is intended to facilitate learning about IL2CPP internals, reverse engineering concepts, and Rust-based interop with native applications.
+
 ## License
 
 [MIT](LICENSE)
