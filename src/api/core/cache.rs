@@ -246,7 +246,7 @@ pub(crate) fn hydrate_all_classes_with_progress(
                     match unsafe { hydrate_class(class_ptr) } {
                         Ok(class) => {
                             hydrated_class_count += 1;
-                            if hydrated_class_count % throttle == 0
+                            if hydrated_class_count.is_multiple_of(throttle)
                                 || hydrated_class_count == total_classes
                             {
                                 on_progress(&class.name, hydrated_class_count, total_classes);
