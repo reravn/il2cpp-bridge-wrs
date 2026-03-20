@@ -109,7 +109,8 @@ impl MethodSelector for (&str, &[&str]) {
         }
 
         for (i, param_name) in self.1.iter().enumerate() {
-            if method.args[i].type_info.name != *param_name {
+            let arg_type = &method.args[i].type_info;
+            if arg_type.name != *param_name && arg_type.cpp_name() != *param_name {
                 return false;
             }
         }

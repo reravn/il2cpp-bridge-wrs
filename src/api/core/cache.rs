@@ -10,10 +10,7 @@ use dashmap::DashMap;
 use once_cell::sync::Lazy;
 use std::ffi::{c_void, CStr};
 use std::ptr;
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
-
-static CLASSES_HYDRATED: AtomicBool = AtomicBool::new(false);
 
 use crate::memory::image;
 use crate::structs::{Arg, Assembly, Class, Field, Image, Method, Property, Type};
@@ -119,22 +116,31 @@ pub fn class_from_ptr(ptr: *mut c_void) -> Option<Class> {
 
 /// Initializes the cache by loading all assemblies and resetting prior state.
 ///
-/// Class hydration is deferred and performed via [`ensure_hydrated`].
+/// Also performs an eager full class hydration pass.
 ///
 /// This is primarily used internally by [`crate::init`].
 pub fn init() -> bool {
     CACHE.assemblies.clear();
     CACHE.classes.clear();
     CACHE.methods.clear();
-    CLASSES_HYDRATED.store(false, Ordering::SeqCst);
 
     unsafe {
         match load_all_assemblies() {
-            Ok(_count) => {
-                #[cfg(dev_release)]
-                logger::info(&format!("Cache initialized: {} assemblies loaded", _count));
-                true
-            }
+            Ok(_assembly_count) => match hydrate_all_classes() {
+                Ok(_class_count) => {
+                    #[cfg(dev_release)]
+                    logger::info(&format!(
+                        "Cache initialized: {} assemblies loaded, {} classes hydrated",
+                        _assembly_count, _class_count
+                    ));
+                    true
+                }
+                Err(_e) => {
+                    #[cfg(dev_release)]
+                    logger::error(&format!("Cache init failed during class hydration: {}", _e));
+                    false
+                }
+            },
             Err(_e) => {
                 #[cfg(dev_release)]
                 logger::error(&format!("Cache init failed: {}", _e));
@@ -144,28 +150,21 @@ pub fn init() -> bool {
     }
 }
 
-/// Ensures full class hydration has happened for the current initialization pass.
-///
-/// Safe to call multiple times. Hydration runs at most once after each
-/// successful [`init`] call.
-pub fn ensure_hydrated() {
-    if CLASSES_HYDRATED
-        .compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst)
-        .is_ok()
-    {
-        hydrate_all_classes();
-    }
+/// Clears the cache so it can be re-populated.
+pub(crate) fn clear() {
+    CACHE.assemblies.clear();
+    CACHE.classes.clear();
+    CACHE.methods.clear();
 }
 
 /// Hydrates all classes in all cached assemblies.
-///
-/// Prefer [`ensure_hydrated`] unless you are working on cache internals.
-pub fn hydrate_all_classes() {
+pub(crate) fn hydrate_all_classes() -> Result<usize, String> {
     let assembly_names: Vec<String> = CACHE
         .assemblies
         .iter()
         .map(|entry| entry.key().clone())
         .collect();
+    let mut hydrated_class_count = 0usize;
 
     for name in assembly_names {
         let assembly_opt = CACHE
@@ -180,9 +179,16 @@ pub fn hydrate_all_classes() {
             for i in 0..class_count {
                 let class_ptr = unsafe { api::image_get_class(assembly.image.address, i) };
                 if !class_ptr.is_null() {
-                    unsafe {
-                        if let Ok(class) = hydrate_class(class_ptr) {
+                    match unsafe { hydrate_class(class_ptr) } {
+                        Ok(class) => {
                             classes.push(class);
+                            hydrated_class_count += 1;
+                        }
+                        Err(e) => {
+                            return Err(format!(
+                                "Failed to hydrate class {} in assembly '{}': {}",
+                                i, name, e
+                            ));
                         }
                     }
                 }
@@ -195,14 +201,84 @@ pub fn hydrate_all_classes() {
         }
     }
     #[cfg(dev_release)]
-    logger::info(&format!("Hydrated {} classes", CACHE.classes.len()));
+    logger::info(&format!("Hydrated {} classes", hydrated_class_count));
+    Ok(hydrated_class_count)
+}
+
+/// Hydrates all classes with a progress callback reporting (class_name, current, total).
+pub(crate) fn hydrate_all_classes_with_progress(
+    on_progress: impl Fn(&str, usize, usize),
+) -> Result<usize, String> {
+    let assembly_names: Vec<String> = CACHE
+        .assemblies
+        .iter()
+        .map(|entry| entry.key().clone())
+        .collect();
+
+    // Pre-pass: count total classes across all assemblies
+    let mut total_classes = 0usize;
+    for name in &assembly_names {
+        if let Some(assembly) = CACHE.assemblies.get(name).map(|e| Arc::clone(e.value())) {
+            total_classes += unsafe { api::image_get_class_count(assembly.image.address) } as usize;
+        }
+    }
+
+    let throttle = if total_classes > 0 {
+        total_classes.div_ceil(50).max(1)
+    } else {
+        1
+    };
+    let mut hydrated_class_count = 0usize;
+
+    for name in assembly_names {
+        let assembly_opt = CACHE
+            .assemblies
+            .get(&name)
+            .map(|entry| Arc::clone(entry.value()));
+
+        if let Some(assembly) = assembly_opt {
+            let mut classes = Vec::new();
+
+            let class_count = unsafe { api::image_get_class_count(assembly.image.address) };
+            for i in 0..class_count {
+                let class_ptr = unsafe { api::image_get_class(assembly.image.address, i) };
+                if !class_ptr.is_null() {
+                    match unsafe { hydrate_class(class_ptr) } {
+                        Ok(class) => {
+                            hydrated_class_count += 1;
+                            if hydrated_class_count % throttle == 0
+                                || hydrated_class_count == total_classes
+                            {
+                                on_progress(&class.name, hydrated_class_count, total_classes);
+                            }
+                            classes.push(class);
+                        }
+                        Err(e) => {
+                            return Err(format!(
+                                "Failed to hydrate class {} in assembly '{}': {}",
+                                i, name, e
+                            ));
+                        }
+                    }
+                }
+            }
+
+            let mut new_assembly = (*assembly).clone();
+            new_assembly.classes = classes;
+
+            CACHE.assemblies.insert(name, Arc::new(new_assembly));
+        }
+    }
+    #[cfg(dev_release)]
+    logger::info(&format!("Hydrated {} classes", hydrated_class_count));
+    Ok(hydrated_class_count)
 }
 
 /// Loads all assemblies at initialization
 ///
 /// # Returns
 /// * `Result<usize, String>` - The number of loaded assemblies or an error message
-unsafe fn load_all_assemblies() -> Result<usize, String> {
+pub(crate) unsafe fn load_all_assemblies() -> Result<usize, String> {
     let domain = api::domain_get();
     if domain.is_null() {
         return Err("Failed to get domain".to_string());

@@ -2,6 +2,7 @@
 pub mod class;
 pub mod object;
 pub mod r#type;
+mod type_fmt;
 pub mod value_type;
 
 pub use class::{Class, MethodSelector};

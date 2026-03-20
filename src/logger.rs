@@ -1,13 +1,45 @@
-const TAG: &str = "il2cpp_bridge";
+//! Logging via platform-appropriate logging backend.
+//!
+//! On Apple platforms (macOS/iOS) the Apple Unified Logging System is used via
+//! `oslog`. On all other platforms `env_logger` is used, which writes to
+//! stderr and respects the `RUST_LOG` environment variable.
 
-pub fn info(msg: &str) {
-    eprintln!("[{}] [INFO] {}", TAG, msg);
+use std::sync::Once;
+
+static INIT: Once = Once::new();
+
+#[cfg(any(target_os = "macos", target_os = "ios"))]
+fn ensure_initialized() {
+    INIT.call_once(|| {
+        use log::LevelFilter;
+        use oslog::OsLogger;
+        OsLogger::new("com.batch.il2cpp-bridge")
+            .level_filter(LevelFilter::Debug)
+            .init()
+            .ok();
+    });
 }
 
-pub fn error(msg: &str) {
-    eprintln!("[{}] [ERROR] {}", TAG, msg);
+#[cfg(not(any(target_os = "macos", target_os = "ios")))]
+fn ensure_initialized() {
+    INIT.call_once(|| {
+        let _ = env_logger::builder()
+            .filter_level(log::LevelFilter::Debug)
+            .try_init();
+    });
+}
+
+pub fn info(msg: &str) {
+    ensure_initialized();
+    log::info!("{}", msg);
 }
 
 pub fn warning(msg: &str) {
-    eprintln!("[{}] [WARN] {}", TAG, msg);
+    ensure_initialized();
+    log::warn!("{}", msg);
+}
+
+pub fn error(msg: &str) {
+    ensure_initialized();
+    log::error!("{}", msg);
 }

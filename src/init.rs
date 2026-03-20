@@ -4,14 +4,12 @@
 //! the function table, attaches the worker thread to the runtime, initializes
 //! the cache, hydrates metadata, and then runs queued callbacks.
 use crate::api::{self, cache, Thread};
+use crate::logger;
 use crate::memory::symbol::resolve_symbol;
 use std::ffi::c_void;
 use std::sync::{Mutex, OnceLock};
 use std::thread;
 use std::time::Duration;
-
-#[cfg(dev_release)]
-use crate::logger;
 
 /// The target image name, set once during [`init()`](super::init).
 pub(crate) static TARGET_IMAGE_NAME: OnceLock<String> = OnceLock::new();
@@ -72,7 +70,6 @@ where
     TARGET_IMAGE_NAME
         .set(target_image.to_owned())
         .unwrap_or_else(|_| {
-            #[cfg(dev_release)]
             logger::info("TARGET_IMAGE_NAME already set, ignoring new value.");
         });
     let mut guard = STATE.lock().unwrap();
@@ -90,42 +87,60 @@ where
             drop(guard);
 
             std::thread::spawn(move || {
-                if let Err(missing) = api::load(|symbol| match resolve_symbol(symbol) {
+                match api::load(|symbol| match resolve_symbol(symbol) {
                     Ok(addr) => addr as *mut c_void,
-                    Err(_e) => {
-                        #[cfg(dev_release)]
-                        logger::error(&format!("{}", _e));
+                    Err(e) => {
+                        logger::error(&format!("{}", e));
                         std::ptr::null_mut()
                     }
                 }) {
-                    #[cfg(dev_release)]
-                    logger::error(&format!(
-                        "Failed to load IL2CPP API symbols: {}",
-                        missing.join(", ")
-                    ));
-
-                    let mut guard = STATE.lock().unwrap();
-                    *guard = State::Idle;
-                    return;
+                    Ok(_) => {}
+                    Err(missing) => {
+                        logger::error(&format!(
+                            "Failed to load IL2CPP API symbols: {}",
+                            missing.join(", ")
+                        ));
+                    }
                 }
 
-                #[cfg(dev_release)]
-                logger::info("IL2CPP API loaded, waiting for runtime...");
-
-                #[cfg(dev_release)]
-                logger::info("IL2CPP runtime ready, installing early hook...");
+                logger::info("IL2CPP API loaded, waiting for cache initialization...");
 
                 let _thread = Thread::attach(true);
 
                 let mut cache_ready = false;
+                let mut asm_count = 0usize;
+                let mut cls_count = 0usize;
+
                 for attempt in 1..=CACHE_INIT_MAX_ATTEMPTS {
-                    if cache::init() {
-                        cache_ready = true;
-                        break;
+                    cache::clear();
+
+                    match unsafe { cache::load_all_assemblies() } {
+                        Ok(a) => {
+                            asm_count = a;
+                            match cache::hydrate_all_classes_with_progress(|_, _, _| {}) {
+                                Ok(c) => {
+                                    cls_count = c;
+                                    logger::info(&format!(
+                                        "Cache initialized: {} assemblies loaded, {} classes hydrated",
+                                        a, c
+                                    ));
+                                    cache_ready = true;
+                                    break;
+                                }
+                                Err(e) => {
+                                    logger::error(&format!(
+                                        "Cache init failed during class hydration: {}",
+                                        e
+                                    ));
+                                }
+                            }
+                        }
+                        Err(e) => {
+                            logger::error(&format!("Cache init failed: {}", e));
+                        }
                     }
 
                     if attempt < CACHE_INIT_MAX_ATTEMPTS {
-                        #[cfg(dev_release)]
                         logger::info(&format!(
                             "Cache initialization attempt {}/{} failed. Retrying in {}s...",
                             attempt,
@@ -136,9 +151,10 @@ where
                     }
                 }
 
+                let _ = (asm_count, cls_count);
+
                 if cache_ready {
-                    #[cfg(dev_release)]
-                    logger::info("Cache ready, starting hooks...");
+                    logger::info("Cache ready, starting callback...");
 
                     let callbacks = {
                         let mut guard = STATE.lock().unwrap();
@@ -149,15 +165,12 @@ where
                         }
                     };
 
-                    cache::ensure_hydrated();
-
                     std::thread::spawn(move || {
                         for cb in callbacks {
                             cb();
                         }
                     });
                 } else {
-                    #[cfg(dev_release)]
                     logger::error("Cache initialization failed after all retry attempts.");
 
                     let mut guard = STATE.lock().unwrap();

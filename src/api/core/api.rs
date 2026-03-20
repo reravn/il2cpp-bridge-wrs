@@ -35,8 +35,9 @@ macro_rules! define_il2cpp_functions {
         ///
         /// # Errors
         /// Returns the list of missing symbol names if any required export could not be resolved.
-        pub fn load(loader: impl Fn(&str) -> *mut c_void) -> Result<(), Vec<&'static str>> {
+        pub fn load(loader: impl Fn(&str) -> *mut c_void) -> Result<usize, Vec<&'static str>> {
             let mut missing = Vec::new();
+            let mut count = 0usize;
             $(
                 let $name = {
                     let ptr = loader($symbol);
@@ -44,24 +45,28 @@ macro_rules! define_il2cpp_functions {
                         missing.push($symbol);
                         None
                     } else {
+                        count += 1;
                         Some(unsafe { transmute::<*mut c_void, $type_name>(ptr) })
                     }
                 };
             )*
 
-            if !missing.is_empty() {
-                return Err(missing);
-            }
-
             let funcs = Il2CppFunctions {
                 $(
-                    $name: $name.expect("checked missing symbol before constructing function table")
+                    $name: $name.unwrap_or_else(|| unsafe {
+                        transmute::<*mut c_void, $type_name>(std::ptr::null_mut())
+                    })
                 ),*
             };
             if FUNCTIONS.set(funcs).is_err() {
                 logger::warning("Il2Cpp functions already initialized!");
             }
-            Ok(())
+
+            if missing.is_empty() {
+                Ok(count)
+            } else {
+                Err(missing)
+            }
         }
 
         fn get_functions() -> &'static Il2CppFunctions {
