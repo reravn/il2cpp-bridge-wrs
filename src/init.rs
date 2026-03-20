@@ -117,7 +117,7 @@ where
                     match unsafe { cache::load_all_assemblies() } {
                         Ok(a) => {
                             asm_count = a;
-                            match cache::hydrate_all_classes_with_progress(|_, _, _| {}) {
+                            match cache::hydrate_all_classes() {
                                 Ok(c) => {
                                     cls_count = c;
                                     logger::info(&format!(
