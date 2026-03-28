@@ -92,11 +92,14 @@ impl Type {
     /// Resolves concrete generic type arguments for inflated generic types
     /// using `type_get_assembly_qualified_name`.
     fn try_resolve_inflated(&self) -> Option<String> {
+        if !self.name.contains('`') {
+            return None;
+        }
         unsafe {
-            let class_ptr = crate::api::class_from_type(self.address);
-            if class_ptr.is_null() || !crate::api::class_is_inflated(class_ptr) {
-                return None;
-            }
+            // let class_ptr = crate::api::class_from_type(self.address);
+            // if class_ptr.is_null() || !crate::api::class_is_inflated(class_ptr) {
+            //     return None;
+            // }
             let aqn_ptr = crate::api::type_get_assembly_qualified_name(self.address);
             if aqn_ptr.is_null() {
                 return None;
@@ -105,6 +108,10 @@ impl Type {
                 .to_string_lossy()
                 .into_owned();
             crate::api::free(aqn_ptr as *mut c_void);
+
+            if !aqn.contains("[[") {
+                return None;
+            }
 
             let cleaned = super::type_fmt::strip_assembly_qualifiers(&aqn);
             Some(super::type_fmt::format_type_name_str(&cleaned))
