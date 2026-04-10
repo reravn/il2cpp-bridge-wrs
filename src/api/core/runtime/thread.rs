@@ -1,6 +1,6 @@
 //! IL2CPP thread attachment and lifecycle helpers.
 use super::super::api;
-#[cfg(dev_release)]
+#[cfg(debug_assertions)]
 use crate::logger;
 use std::ffi::c_void;
 use std::ptr;
@@ -46,7 +46,7 @@ impl Thread {
             unsafe {
                 api::thread_detach(self.thread_ptr);
             }
-            #[cfg(dev_release)]
+            #[cfg(debug_assertions)]
             logger::info("Thread manually detached from IL2CPP");
             self.thread_ptr = ptr::null_mut();
         }
@@ -87,7 +87,7 @@ impl Thread {
     pub fn attach(auto_detach: bool) -> Option<Self> {
         unsafe {
             if Self::is_attached() {
-                #[cfg(dev_release)]
+                #[cfg(debug_assertions)]
                 logger::info("Thread already attached to IL2CPP, returning existing thread");
                 return Self::current();
             }
@@ -95,7 +95,7 @@ impl Thread {
             let domain_ptr = api::domain_get();
 
             if domain_ptr.is_null() {
-                #[cfg(dev_release)]
+                #[cfg(debug_assertions)]
                 logger::error("Failed to get IL2CPP domain for thread attachment");
                 return None;
             }
@@ -103,11 +103,11 @@ impl Thread {
             let thread_ptr = api::thread_attach(domain_ptr);
 
             if thread_ptr.is_null() {
-                #[cfg(dev_release)]
+                #[cfg(debug_assertions)]
                 logger::error("Failed to attach thread to IL2CPP");
                 None
             } else {
-                #[cfg(dev_release)]
+                #[cfg(debug_assertions)]
                 logger::info("Thread successfully attached to IL2CPP");
                 Some(Self::from_ptr(thread_ptr, auto_detach))
             }
@@ -155,7 +155,7 @@ impl Drop for Thread {
             unsafe {
                 api::thread_detach(self.thread_ptr);
             }
-            #[cfg(dev_release)]
+            #[cfg(debug_assertions)]
             logger::info("Thread automatically detached from IL2CPP");
             self.thread_ptr = ptr::null_mut();
         }

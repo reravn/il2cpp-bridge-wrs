@@ -1,6 +1,6 @@
 //! Metadata dump helpers that emit C#-like pseudo-code.
 use crate::api::{cache, Application};
-#[cfg(dev_release)]
+#[cfg(debug_assertions)]
 use crate::logger;
 use crate::structs::Assembly;
 use std::fs::File;
@@ -68,7 +68,7 @@ fn get_dump_dir(base_path: Option<&str>) -> Option<PathBuf> {
     let dump_dir = Path::new(&root).join("dump");
 
     if let Err(_e) = std::fs::create_dir_all(&dump_dir) {
-        #[cfg(dev_release)]
+        #[cfg(debug_assertions)]
         logger::error(&format!("Failed to create dump directory: {}", _e));
         return None;
     }
@@ -80,7 +80,7 @@ fn get_dump_dir(base_path: Option<&str>) -> Option<PathBuf> {
 fn dump_assemblies_impl(base_path: Option<&str>, single_file_name: Option<&str>) -> Option<String> {
     let dump_dir = get_dump_dir(base_path)?;
 
-    #[cfg(dev_release)]
+    #[cfg(debug_assertions)]
     logger::info(&format!("Dumping assemblies to {:?}...", dump_dir));
 
     let assemblies = sorted_assemblies();
@@ -91,7 +91,7 @@ fn dump_assemblies_impl(base_path: Option<&str>, single_file_name: Option<&str>)
         let file = match File::create(&path) {
             Ok(f) => f,
             Err(_e) => {
-                #[cfg(dev_release)]
+                #[cfg(debug_assertions)]
                 logger::error(&format!("Failed to create dump file: {}", _e));
                 return None;
             }
@@ -100,14 +100,14 @@ fn dump_assemblies_impl(base_path: Option<&str>, single_file_name: Option<&str>)
 
         // Image index block at the top
         if let Err(_e) = write_image_list(&mut writer, &assemblies) {
-            #[cfg(dev_release)]
+            #[cfg(debug_assertions)]
             logger::error(&format!("Failed to write image list: {}", _e));
         }
 
         // Classes in sorted order
         for assembly in &assemblies {
             if let Err(_e) = write_assembly(&mut writer, assembly) {
-                #[cfg(dev_release)]
+                #[cfg(debug_assertions)]
                 logger::error(&format!(
                     "Failed to write assembly {}: {}",
                     assembly.name, _e
@@ -116,12 +116,12 @@ fn dump_assemblies_impl(base_path: Option<&str>, single_file_name: Option<&str>)
         }
 
         if let Err(_e) = writer.flush() {
-            #[cfg(dev_release)]
+            #[cfg(debug_assertions)]
             logger::error(&format!("Failed to flush writer: {}", _e));
             return None;
         }
 
-        #[cfg(dev_release)]
+        #[cfg(debug_assertions)]
         logger::info(&format!("Dumped all assemblies to {:?}", path));
         Some(path.to_string_lossy().into_owned())
     } else {
@@ -132,7 +132,7 @@ fn dump_assemblies_impl(base_path: Option<&str>, single_file_name: Option<&str>)
             let file = match File::create(&path) {
                 Ok(f) => f,
                 Err(_e) => {
-                    #[cfg(dev_release)]
+                    #[cfg(debug_assertions)]
                     logger::error(&format!(
                         "Failed to create dump file for {}: {}",
                         assembly.name, _e
@@ -143,12 +143,12 @@ fn dump_assemblies_impl(base_path: Option<&str>, single_file_name: Option<&str>)
             let mut writer = BufWriter::new(file);
 
             if let Err(_e) = write_image_list(&mut writer, &assemblies) {
-                #[cfg(dev_release)]
+                #[cfg(debug_assertions)]
                 logger::error(&format!("Failed to write image list: {}", _e));
             }
 
             if let Err(_e) = write_assembly(&mut writer, assembly) {
-                #[cfg(dev_release)]
+                #[cfg(debug_assertions)]
                 logger::error(&format!(
                     "Failed to write assembly {}: {}",
                     assembly.name, _e
@@ -156,12 +156,12 @@ fn dump_assemblies_impl(base_path: Option<&str>, single_file_name: Option<&str>)
             }
 
             if writer.flush().is_ok() {
-                #[cfg(dev_release)]
+                #[cfg(debug_assertions)]
                 logger::info(&format!("Successfully dumped assembly {}", assembly.name));
             }
         }
 
-        #[cfg(dev_release)]
+        #[cfg(debug_assertions)]
         logger::info("Dumped all assemblies");
         Some(dump_dir.to_string_lossy().into_owned())
     }
@@ -186,28 +186,28 @@ pub fn dump_assembly(assembly_to_dump: Option<&str>) -> Option<()> {
     let file = match File::create(&path) {
         Ok(f) => f,
         Err(_e) => {
-            #[cfg(dev_release)]
+            #[cfg(debug_assertions)]
             logger::error(&format!("Failed to create dump file: {}", _e));
             return None;
         }
     };
     let mut writer = BufWriter::new(file);
 
-    #[cfg(dev_release)]
+    #[cfg(debug_assertions)]
     logger::info(&format!("Dumping assembly {}", target_name));
 
     let assemblies = sorted_assemblies();
 
     // Image index block at the top
     if let Err(_e) = write_image_list(&mut writer, &assemblies) {
-        #[cfg(dev_release)]
+        #[cfg(debug_assertions)]
         logger::error(&format!("Failed to write image list: {}", _e));
     }
 
     for assembly in &assemblies {
         if assembly.name.contains(target_name) {
             if let Err(_e) = write_assembly(&mut writer, assembly) {
-                #[cfg(dev_release)]
+                #[cfg(debug_assertions)]
                 logger::error(&format!("Failed to write assembly header: {}", _e));
                 return None;
             }
@@ -215,12 +215,12 @@ pub fn dump_assembly(assembly_to_dump: Option<&str>) -> Option<()> {
     }
 
     if let Err(_e) = writer.flush() {
-        #[cfg(dev_release)]
+        #[cfg(debug_assertions)]
         logger::error(&format!("Failed to flush writer: {}", _e));
         return None;
     }
 
-    #[cfg(dev_release)]
+    #[cfg(debug_assertions)]
     logger::info(&format!("Dumped assembly to {:?}", path));
     Some(())
 }
