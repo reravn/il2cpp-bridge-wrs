@@ -4,7 +4,7 @@
 //! point for metadata-driven workflows. Most users should use the helper
 //! functions in this module rather than traversing IL2CPP metadata manually.
 use super::api;
-#[cfg(dev_release)]
+#[cfg(debug_assertions)]
 use crate::logger;
 use dashmap::DashMap;
 use once_cell::sync::Lazy;
@@ -128,7 +128,7 @@ pub fn init() -> bool {
         match load_all_assemblies() {
             Ok(_assembly_count) => match hydrate_all_classes() {
                 Ok(_class_count) => {
-                    #[cfg(dev_release)]
+                    #[cfg(debug_assertions)]
                     logger::info(&format!(
                         "Cache initialized: {} assemblies loaded, {} classes hydrated",
                         _assembly_count, _class_count
@@ -136,13 +136,13 @@ pub fn init() -> bool {
                     true
                 }
                 Err(_e) => {
-                    #[cfg(dev_release)]
+                    #[cfg(debug_assertions)]
                     logger::error(&format!("Cache init failed during class hydration: {}", _e));
                     false
                 }
             },
             Err(_e) => {
-                #[cfg(dev_release)]
+                #[cfg(debug_assertions)]
                 logger::error(&format!("Cache init failed: {}", _e));
                 false
             }
@@ -200,7 +200,7 @@ pub(crate) fn hydrate_all_classes() -> Result<usize, String> {
             CACHE.assemblies.insert(name, Arc::new(new_assembly));
         }
     }
-    #[cfg(dev_release)]
+    #[cfg(debug_assertions)]
     logger::info(&format!("Hydrated {} classes", hydrated_class_count));
     Ok(hydrated_class_count)
 }

@@ -41,5 +41,3 @@ panic = "abort"
 strip = "debuginfo"
 overflow-checks = false
 
-[lints.rust]
-unexpected_cfgs = { level = "warn", check-cfg = ['cfg(dev_release)'] }
