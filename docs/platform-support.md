@@ -74,6 +74,16 @@ make build-windows
 
 ## Common Failure Modes
 
+### Linux: IL2CPP symbols not found
+
+On Linux, Unity may load `GameAssembly.so` with `RTLD_LOCAL`, which prevents `dlsym(RTLD_DEFAULT, ...)` from finding its exports. The crate handles this automatically by promoting the library to global visibility via `dlopen` with `RTLD_GLOBAL` before the first symbol lookup.
+
+If automatic promotion fails (check log output), you can call `promote_library_to_global("GameAssembly")` before `init()` as a manual workaround, or use the raw `libc::dlopen` approach:
+
+```rust
+unsafe { libc::dlopen(b"GameAssembly.so\0".as_ptr().cast(), libc::RTLD_NOW | libc::RTLD_GLOBAL); }
+```
+
 ### Initialization does not complete
 
 Likely causes:

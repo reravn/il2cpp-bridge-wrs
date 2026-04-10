@@ -5,7 +5,7 @@
 //! the cache, hydrates metadata, and then runs queued callbacks.
 use crate::api::{self, cache, Thread};
 use crate::logger;
-use crate::memory::symbol::resolve_symbol;
+use crate::memory::symbol::{promote_library_to_global, resolve_symbol};
 use std::ffi::c_void;
 use std::sync::{Mutex, OnceLock};
 use std::thread;
@@ -87,6 +87,10 @@ where
             drop(guard);
 
             std::thread::spawn(move || {
+                if let Some(target) = TARGET_IMAGE_NAME.get() {
+                    promote_library_to_global(target);
+                }
+
                 match api::load(|symbol| match resolve_symbol(symbol) {
                     Ok(addr) => addr as *mut c_void,
                     Err(e) => {

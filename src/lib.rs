@@ -72,3 +72,4 @@ pub mod memory;
 pub mod structs;
 
 pub use init::init;
+pub use memory::symbol::promote_library_to_global;

@@ -16,6 +16,14 @@ pub fn get_image_base(name: &str) -> Option<usize> {
     Some(addr)
 }
 
+/// Returns the full filesystem path of the loaded image matching `name`, if found.
+///
+/// On Linux/Android this walks loaded shared objects via `dl_iterate_phdr`.
+/// On other platforms this always returns `None`.
+pub fn get_image_path(name: &str) -> Option<String> {
+    platform::find_image_path(name)
+}
+
 // macOS / iOS: iterate loaded dylibs via dyld to find the matching Mach-O header.
 #[cfg(any(target_os = "macos", target_os = "ios"))]
 mod platform {
@@ -39,6 +47,10 @@ mod platform {
                 }
             }
         }
+        None
+    }
+
+    pub fn find_image_path(_name: &str) -> Option<String> {
         None
     }
 }
@@ -83,6 +95,42 @@ mod platform {
 
         data.result
     }
+
+    pub fn find_image_path(name: &str) -> Option<String> {
+        struct CallbackData {
+            name: String,
+            result: Option<String>,
+        }
+
+        unsafe extern "C" fn callback(
+            info: *mut libc::dl_phdr_info,
+            _size: libc::size_t,
+            data: *mut libc::c_void,
+        ) -> libc::c_int {
+            let data = &mut *(data as *mut CallbackData);
+            let dlpi_name = (*info).dlpi_name;
+            if dlpi_name.is_null() {
+                return 0;
+            }
+            let path = CStr::from_ptr(dlpi_name).to_string_lossy();
+            if path.contains(&data.name) {
+                data.result = Some(path.into_owned());
+                return 1;
+            }
+            0
+        }
+
+        let mut data = CallbackData {
+            name: name.to_string(),
+            result: None,
+        };
+
+        unsafe {
+            libc::dl_iterate_phdr(Some(callback), &mut data as *mut _ as *mut libc::c_void);
+        }
+
+        data.result
+    }
 }
 
 // Windows: use GetModuleHandleA to retrieve the base address of a loaded module by name.
@@ -102,6 +150,10 @@ mod platform {
             }
         }
     }
+
+    pub fn find_image_path(_name: &str) -> Option<String> {
+        None
+    }
 }
 
 // Unsupported platforms: always return None.
@@ -114,6 +166,10 @@ mod platform {
 )))]
 mod platform {
     pub fn find_image_base(_name: &str) -> Option<usize> {
+        None
+    }
+
+    pub fn find_image_path(_name: &str) -> Option<String> {
         None
     }
 }
