@@ -3,6 +3,14 @@
 mod parse;
 use parse::{csharp_alias, generic_arity, split_generic_type};
 
+fn display_simple_name(name: &str) -> String {
+    let simple = name.rfind('.').map(|p| &name[p + 1..]).unwrap_or(name);
+    let nested_simple = simple.rsplit('+').next().unwrap_or(simple);
+    csharp_alias(nested_simple)
+        .unwrap_or(nested_simple)
+        .to_string()
+}
+
 pub(super) fn format_class_name(raw: &str) -> String {
     if let Some(a) = csharp_alias(raw) {
         return a.to_string();
@@ -26,11 +34,11 @@ pub(super) fn format_class_name(raw: &str) -> String {
             .unwrap_or(0);
         if arity > 0 {
             let p: Vec<_> = (0..arity).map(|i| format!("T{i}")).collect();
-            return format!("{}<{}>", base, p.join(", "));
+            return format!("{}<{}>", display_simple_name(base), p.join(", "));
         }
-        return base.to_string();
+        return display_simple_name(base);
     }
-    raw.to_string()
+    display_simple_name(raw)
 }
 
 pub(super) fn format_type_name_str(name: &str) -> String {
@@ -48,14 +56,14 @@ pub(super) fn format_type_name_str(name: &str) -> String {
         }
     }
     if let Some((base, args)) = split_generic_type(name) {
-        let simple = base.rfind('.').map(|p| &base[p + 1..]).unwrap_or(base);
+        let simple = display_simple_name(base);
         if args.is_empty() {
             let arity = generic_arity(name);
             if arity > 0 {
                 let p: Vec<_> = (0..arity).map(|i| format!("T{i}")).collect();
                 return format!("{}<{}>", simple, p.join(", "));
             }
-            return simple.to_string();
+            return simple;
         }
         let a = args
             .iter()
@@ -64,8 +72,7 @@ pub(super) fn format_type_name_str(name: &str) -> String {
             .join(", ");
         return format!("{simple}<{a}>");
     }
-    let simple = name.rfind('.').map(|p| &name[p + 1..]).unwrap_or(name);
-    csharp_alias(simple).unwrap_or(simple).to_string()
+    display_simple_name(name)
 }
 
 /// Strips assembly qualifiers from an IL2CPP assembly-qualified name.

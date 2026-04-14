@@ -57,8 +57,12 @@ impl Type {
 
     /// Returns a readable C#-style display name for this type.
     pub fn cpp_name(&self) -> String {
-        // For inflated generics, resolve concrete type args via AQN
-        if !self.address.is_null() {
+        // For generics and other compound types, prefer the runtime-qualified
+        // name when available because `type_get_name` can collapse inflated
+        // collection types back to their generic definition.
+        if !self.address.is_null()
+            && (self.name.contains('`') || self.name.contains('<') || self.name.contains('['))
+        {
             if let Some(name) = self.try_resolve_inflated() {
                 return name;
             }
@@ -89,17 +93,10 @@ impl Type {
         super::type_fmt::format_type_name_str(&self.name)
     }
 
-    /// Resolves concrete generic type arguments for inflated generic types
-    /// using `type_get_assembly_qualified_name`.
+    /// Resolves a more specific runtime name using
+    /// `type_get_assembly_qualified_name`.
     fn try_resolve_inflated(&self) -> Option<String> {
-        if !self.name.contains('`') {
-            return None;
-        }
         unsafe {
-            // let class_ptr = crate::api::class_from_type(self.address);
-            // if class_ptr.is_null() || !crate::api::class_is_inflated(class_ptr) {
-            //     return None;
-            // }
             let aqn_ptr = crate::api::type_get_assembly_qualified_name(self.address);
             if aqn_ptr.is_null() {
                 return None;
@@ -109,12 +106,9 @@ impl Type {
                 .into_owned();
             crate::api::free(aqn_ptr as *mut c_void);
 
-            if !aqn.contains("[[") {
-                return None;
-            }
-
             let cleaned = super::type_fmt::strip_assembly_qualifiers(&aqn);
-            Some(super::type_fmt::format_type_name_str(&cleaned))
+            let formatted = super::type_fmt::format_type_name_str(&cleaned);
+            (!formatted.is_empty()).then_some(formatted)
         }
     }
 }
