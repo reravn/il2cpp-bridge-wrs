@@ -26,10 +26,23 @@ pub struct Il2cppArray<T> {
 }
 
 impl<T: Copy> Il2cppArray<T> {
+    /// Returns the number of elements in the array.
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.max_length
+    }
+
+    /// Returns true if this array has no elements.
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.max_length == 0
+    }
+
     /// Gets the address of the data array
     ///
     /// # Returns
     /// * `usize` - The memory address where the array data begins
+    #[inline]
     pub fn get_data(&self) -> usize {
         let header_size = std::mem::size_of::<Self>();
         (self as *const Self as usize) + header_size
@@ -50,10 +63,7 @@ impl<T: Copy> Il2cppArray<T> {
             panic!("Index out of bounds: {} >= {}", index, self.max_length);
         }
 
-        unsafe {
-            let element_ptr = (self.get_data() + index * std::mem::size_of::<T>()) as *const T;
-            *element_ptr
-        }
+        unsafe { self.get_pointer().add(index).read() }
     }
 
     /// Alias for `get`
@@ -80,10 +90,7 @@ impl<T: Copy> Il2cppArray<T> {
             panic!("Index out of bounds: {} >= {}", index, self.max_length);
         }
 
-        unsafe {
-            let element_ptr = (self.get_data() + index * std::mem::size_of::<T>()) as *mut T;
-            *element_ptr = value;
-        }
+        unsafe { (self.get_pointer() as *mut T).add(index).write(value) }
     }
 
     /// Gets a raw pointer to the data
@@ -102,19 +109,18 @@ impl<T: Copy> Il2cppArray<T> {
     /// * `size` - The number of elements to insert
     /// * `index` - The starting index in the array
     pub fn insert(&mut self, arr: &[T], size: usize, index: usize) {
-        if (size + index) >= self.max_length {
-            if index >= self.max_length {
-                return;
-            }
+        let available = self.max_length.saturating_sub(index);
+        let copy_len = available.min(size).min(arr.len());
+        if copy_len == 0 {
+            return;
+        }
 
-            let new_size = self.max_length - index;
-            for (i, &item) in arr.iter().enumerate().take(new_size) {
-                self.set(i + index, item);
-            }
-        } else {
-            for (i, &item) in arr.iter().enumerate().take(size) {
-                self.set(i + index, item);
-            }
+        unsafe {
+            std::ptr::copy_nonoverlapping(
+                arr.as_ptr(),
+                (self.get_pointer() as *mut T).add(index),
+                copy_len,
+            );
         }
     }
 
@@ -123,8 +129,9 @@ impl<T: Copy> Il2cppArray<T> {
     /// # Arguments
     /// * `value` - The value to fill the array with
     pub fn fill(&mut self, value: T) {
-        for i in 0..self.max_length {
-            self.set(i, value);
+        unsafe {
+            std::slice::from_raw_parts_mut(self.get_pointer() as *mut T, self.max_length)
+                .fill(value);
         }
     }
 
@@ -164,13 +171,13 @@ impl<T: Copy> Il2cppArray<T> {
     /// # Arguments
     /// * `index` - The starting index
     /// * `count` - The number of elements to remove
-    pub fn remove_range(&mut self, index: usize, mut count: usize) {
+    pub fn remove_range(&mut self, index: usize, count: usize) {
         if index >= self.max_length {
             return;
         }
 
         if count == 0 {
-            count = 1;
+            return;
         }
 
         let count = count.min(self.max_length - index);
@@ -196,11 +203,7 @@ impl<T: Copy> Il2cppArray<T> {
     /// # Returns
     /// * `Vec<T>` - A new vector containing the array elements
     pub fn to_vector(&self) -> Vec<T> {
-        let mut result = Vec::with_capacity(self.max_length);
-        for i in 0..self.max_length {
-            result.push(self.at(i));
-        }
-        result
+        unsafe { std::slice::from_raw_parts(self.get_pointer(), self.max_length).to_vec() }
     }
 
     /// Creates a new array instance

@@ -2,12 +2,15 @@
 
 pub(super) fn generic_arity(name: &str) -> usize {
     name.find('`').map_or(0, |bt| {
-        name[bt + 1..]
-            .chars()
-            .take_while(|c| c.is_ascii_digit())
-            .collect::<String>()
-            .parse()
-            .unwrap_or(0)
+        let rest = &name[bt + 1..];
+        let end = rest
+            .find(|c: char| !c.is_ascii_digit())
+            .unwrap_or(rest.len());
+        if end == 0 {
+            0
+        } else {
+            rest[..end].parse().unwrap_or(0)
+        }
     })
 }
 

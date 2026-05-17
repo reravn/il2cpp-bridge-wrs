@@ -86,12 +86,15 @@ impl Method {
             ""
         };
 
-        let args_str = self
-            .args
-            .iter()
-            .map(|arg| format!("{} {}", arg.type_info.cpp_name(), arg.name))
-            .collect::<Vec<_>>()
-            .join(", ");
+        let mut args_str = String::new();
+        for (i, arg) in self.args.iter().enumerate() {
+            if i > 0 {
+                args_str.push_str(", ");
+            }
+            args_str.push_str(&arg.type_info.cpp_name());
+            args_str.push(' ');
+            args_str.push_str(&arg.name);
+        }
 
         let rva_comment = if self.rva == 0 {
             "// RVA: -1 Offset: -1 VA: -1".to_string()
@@ -316,7 +319,7 @@ impl Method {
 
             let mhandle_field = inflated_obj
                 .field("mhandle")
-                .unwrap()
+                .ok_or_else(|| "Could not find mhandle field on MethodInfo".to_string())?
                 .get_value::<*mut c_void>()
                 .map_err(|e| format!("Could not read mhandle field: {}", e))?;
 

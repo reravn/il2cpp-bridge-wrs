@@ -11,6 +11,23 @@ fn display_simple_name(name: &str) -> String {
         .to_string()
 }
 
+pub(super) fn type_name_matches(raw: &str, expected: &str) -> bool {
+    let raw = raw.trim();
+    let expected = expected.trim();
+
+    if raw == expected {
+        return true;
+    }
+
+    if csharp_alias(raw).is_some_and(|alias| alias == expected) {
+        return true;
+    }
+
+    let simple = raw.rfind('.').map(|p| &raw[p + 1..]).unwrap_or(raw);
+    let nested_simple = simple.rsplit('+').next().unwrap_or(simple);
+    nested_simple == expected || csharp_alias(nested_simple).is_some_and(|alias| alias == expected)
+}
+
 pub(super) fn format_class_name(raw: &str) -> String {
     if let Some(a) = csharp_alias(raw) {
         return a.to_string();

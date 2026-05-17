@@ -51,22 +51,20 @@ macro_rules! define_il2cpp_functions {
                 };
             )*
 
+            if !missing.is_empty() {
+                return Err(missing);
+            }
+
             let funcs = Il2CppFunctions {
                 $(
-                    $name: $name.unwrap_or_else(|| unsafe {
-                        transmute::<*mut c_void, $type_name>(std::ptr::null_mut())
-                    })
+                    $name: $name.expect("IL2CPP symbol checked above")
                 ),*
             };
             if FUNCTIONS.set(funcs).is_err() {
                 logger::warning("Il2Cpp functions already initialized!");
             }
 
-            if missing.is_empty() {
-                Ok(count)
-            } else {
-                Err(missing)
-            }
+            Ok(count)
         }
 
         fn get_functions() -> &'static Il2CppFunctions {

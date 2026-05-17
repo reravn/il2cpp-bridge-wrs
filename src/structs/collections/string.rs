@@ -23,6 +23,10 @@ impl Il2cppString {
     /// # Returns
     /// * `Option<String>` - The converted Rust string, or None if invalid UTF-16
     pub fn to_string(&self) -> Option<String> {
+        if self.length < 0 {
+            return None;
+        }
+
         let len = self.length as usize;
         unsafe {
             let slice = slice::from_raw_parts(self.chars.as_ptr(), len);
@@ -38,7 +42,11 @@ impl Il2cppString {
     /// # Returns
     /// * `*mut Il2cppString` - Pointer to the newly created IL2CPP string
     pub fn new(s: &str) -> *mut Il2cppString {
-        let c_str = std::ffi::CString::new(s).unwrap();
-        unsafe { api::string_new(c_str.as_ptr()) as *mut Il2cppString }
+        let utf16: Vec<u16> = s.encode_utf16().collect();
+        if utf16.len() > i32::MAX as usize {
+            return std::ptr::null_mut();
+        }
+
+        unsafe { api::string_new_utf16(utf16.as_ptr(), utf16.len() as i32) as *mut Il2cppString }
     }
 }

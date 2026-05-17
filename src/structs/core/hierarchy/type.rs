@@ -55,6 +55,23 @@ impl Type {
         unsafe { crate::api::type_get_type(self.address) }
     }
 
+    /// Returns true when `expected` matches the raw IL2CPP name, C# alias,
+    /// simplified class name, or the fully formatted display name.
+    pub fn matches_name(&self, expected: &str) -> bool {
+        if super::type_fmt::type_name_matches(&self.name, expected) {
+            return true;
+        }
+
+        if !self.name.is_empty() {
+            let formatted = super::type_fmt::format_type_name_str(&self.name);
+            if formatted == expected {
+                return true;
+            }
+        }
+
+        !self.address.is_null() && self.cpp_name() == expected
+    }
+
     /// Returns a readable C#-style display name for this type.
     pub fn cpp_name(&self) -> String {
         // For generics and other compound types, prefer the runtime-qualified

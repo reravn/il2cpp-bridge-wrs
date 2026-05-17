@@ -8,7 +8,8 @@ use super::api;
 use crate::logger;
 use dashmap::DashMap;
 use once_cell::sync::Lazy;
-use std::ffi::{c_void, CStr};
+use rustc_hash::FxHashMap;
+use std::ffi::{c_char, c_void, CStr};
 use std::ptr;
 use std::sync::Arc;
 
@@ -21,6 +22,8 @@ pub struct Il2CppCache {
     pub assemblies: DashMap<String, Arc<Assembly>>,
     /// Helper map of class names to Class structs (boxed)
     pub classes: DashMap<String, Box<Class>>,
+    /// Pointer-to-class-name index used to avoid O(n) scans and name-collision bugs.
+    pub classes_by_ptr: DashMap<usize, String>,
     /// Helper map of method keys to Method structs
     pub methods: DashMap<String, Method>,
 }
@@ -32,6 +35,7 @@ unsafe impl Sync for Il2CppCache {}
 pub static CACHE: Lazy<Il2CppCache> = Lazy::new(|| Il2CppCache {
     assemblies: DashMap::new(),
     classes: DashMap::new(),
+    classes_by_ptr: DashMap::new(),
     methods: DashMap::new(),
 });
 
@@ -111,6 +115,11 @@ pub fn class_from_ptr(ptr: *mut c_void) -> Option<Class> {
     if ptr.is_null() {
         return None;
     }
+
+    if let Some(class) = cached_class_by_ptr(ptr) {
+        return Some(class);
+    }
+
     unsafe { hydrate_class(ptr).ok() }
 }
 
@@ -122,6 +131,7 @@ pub fn class_from_ptr(ptr: *mut c_void) -> Option<Class> {
 pub fn init() -> bool {
     CACHE.assemblies.clear();
     CACHE.classes.clear();
+    CACHE.classes_by_ptr.clear();
     CACHE.methods.clear();
 
     unsafe {
@@ -154,6 +164,7 @@ pub fn init() -> bool {
 pub(crate) fn clear() {
     CACHE.assemblies.clear();
     CACHE.classes.clear();
+    CACHE.classes_by_ptr.clear();
     CACHE.methods.clear();
 }
 
@@ -173,9 +184,9 @@ pub(crate) fn hydrate_all_classes() -> Result<usize, String> {
             .map(|entry| Arc::clone(entry.value()));
 
         if let Some(assembly) = assembly_opt {
-            let mut classes = Vec::new();
-
             let class_count = unsafe { api::image_get_class_count(assembly.image.address) };
+            let mut classes = Vec::with_capacity(class_count as usize);
+
             for i in 0..class_count {
                 let class_ptr = unsafe { api::image_get_class(assembly.image.address, i) };
                 if !class_ptr.is_null() {
@@ -297,6 +308,71 @@ unsafe fn hydrate_assembly(assembly_ptr: *mut c_void) -> Option<Arc<Assembly>> {
     Some(Arc::new(assembly))
 }
 
+#[inline]
+unsafe fn cstr_lossy(ptr: *const c_char, default: &str) -> String {
+    if ptr.is_null() {
+        default.to_owned()
+    } else {
+        CStr::from_ptr(ptr).to_string_lossy().into_owned()
+    }
+}
+
+#[inline]
+unsafe fn type_name_or(type_ptr: *mut c_void, default: &str) -> String {
+    if type_ptr.is_null() {
+        return default.to_owned();
+    }
+    cstr_lossy(api::type_get_name(type_ptr), default)
+}
+
+#[inline]
+fn make_class_key(namespace: &str, name: &str) -> String {
+    if namespace.is_empty() {
+        name.to_owned()
+    } else {
+        format!("{}.{}", namespace, name)
+    }
+}
+
+fn make_unique_class_key(preferred: &str, class_ptr: *mut c_void) -> String {
+    match CACHE.classes.get(preferred) {
+        Some(existing) if existing.address != class_ptr => {
+            format!("{}@0x{:X}", preferred, class_ptr as usize)
+        }
+        _ => preferred.to_owned(),
+    }
+}
+
+fn cached_class_by_ptr(ptr: *mut c_void) -> Option<Class> {
+    let key = CACHE.classes_by_ptr.get(&(ptr as usize))?;
+    let class = CACHE.classes.get(key.value())?;
+    Some((**class.value()).clone())
+}
+
+fn cached_class_ref_by_ptr(ptr: *mut c_void) -> Option<*const Class> {
+    let key = CACHE.classes_by_ptr.get(&(ptr as usize))?;
+    let class = CACHE.classes.get(key.value())?;
+    Some(&**class.value() as *const Class)
+}
+
+fn method_cache_key(full_class_name: &str, method: &Method) -> String {
+    let mut key = String::with_capacity(
+        full_class_name.len() + method.name.len() + method.args.len().saturating_mul(16) + 4,
+    );
+    key.push_str(full_class_name);
+    key.push_str("::");
+    key.push_str(&method.name);
+    key.push('(');
+    for (i, arg) in method.args.iter().enumerate() {
+        if i > 0 {
+            key.push(',');
+        }
+        key.push_str(&arg.type_info.name);
+    }
+    key.push(')');
+    key
+}
+
 /// Hydrates a class from a pointer, populating fields and methods
 ///
 /// # Arguments
@@ -305,40 +381,36 @@ unsafe fn hydrate_assembly(assembly_ptr: *mut c_void) -> Option<Arc<Assembly>> {
 /// # Returns
 /// * `Result<Class, String>` - The hydrated Class struct or an error
 unsafe fn hydrate_class(class_ptr: *mut c_void) -> Result<Class, String> {
+    if let Some(existing) = cached_class_by_ptr(class_ptr) {
+        return Ok(existing);
+    }
+
     let name_ptr = api::class_get_name(class_ptr);
+    if name_ptr.is_null() {
+        return Err("class_get_name returned null".to_string());
+    }
     let namespace_ptr = api::class_get_namespace(class_ptr);
 
-    let name = CStr::from_ptr(name_ptr).to_string_lossy().into_owned();
-    let namespace = CStr::from_ptr(namespace_ptr).to_string_lossy().into_owned();
-
-    let key = if namespace.is_empty() {
-        name.clone()
-    } else {
-        format!("{}.{}", namespace, name)
-    };
+    let name = cstr_lossy(name_ptr, "");
+    let namespace = cstr_lossy(namespace_ptr, "");
+    let key = make_class_key(&namespace, &name);
 
     if let Some(existing) = CACHE.classes.get(&key) {
         if existing.address == class_ptr {
+            CACHE.classes_by_ptr.insert(class_ptr as usize, key.clone());
             return Ok((**existing).clone());
         }
     }
 
+    let cache_key = make_unique_class_key(&key, class_ptr);
+
     let parent_ptr = api::class_get_parent(class_ptr);
     let parent = if !parent_ptr.is_null() {
         let p_name = api::class_get_name(parent_ptr);
-        let p_namespace = api::class_get_namespace(parent_ptr);
         if !p_name.is_null() {
-            let name = CStr::from_ptr(p_name).to_string_lossy();
-            let namespace = if !p_namespace.is_null() {
-                CStr::from_ptr(p_namespace).to_string_lossy()
-            } else {
-                std::borrow::Cow::Borrowed("")
-            };
-            if namespace.is_empty() {
-                Some(name.into_owned())
-            } else {
-                Some(format!("{}.{}", namespace, name))
-            }
+            let name = cstr_lossy(p_name, "");
+            let namespace = cstr_lossy(api::class_get_namespace(parent_ptr), "");
+            Some(make_class_key(&namespace, &name))
         } else {
             None
         }
@@ -366,17 +438,20 @@ unsafe fn hydrate_class(class_ptr: *mut c_void) -> Result<Class, String> {
         nested_types.push(nested_ptr);
     }
 
-    let assembly_name_ptr = api::class_get_assemblyname(class_ptr);
-    let assembly_name = if !assembly_name_ptr.is_null() {
-        CStr::from_ptr(assembly_name_ptr)
-            .to_string_lossy()
-            .into_owned()
-    } else {
-        String::new()
-    };
+    let assembly_name = cstr_lossy(api::class_get_assemblyname(class_ptr), "");
 
     // Use Arc clone for cheap assembly reference
-    let assembly = CACHE.assemblies.get(&assembly_name).map(|a| Arc::clone(&a));
+    let assembly = CACHE
+        .assemblies
+        .get(&assembly_name)
+        .map(|a| Arc::clone(a.value()));
+
+    let ty = api::class_get_type(class_ptr);
+    let object = if ty.is_null() {
+        ptr::null_mut()
+    } else {
+        api::type_get_object(ty)
+    };
 
     let mut class_box = Box::new(Class {
         address: class_ptr,
@@ -408,15 +483,11 @@ unsafe fn hydrate_class(class_ptr: *mut c_void) -> Result<Class, String> {
         nested_types,
         element_class: api::class_get_element_class(class_ptr),
         declaring_type: api::class_get_declaring_type(class_ptr),
-        ty: api::class_get_type(class_ptr),
-        object: api::type_get_object(api::class_get_type(class_ptr)),
+        ty,
+        object,
     });
 
-    let full_class_name = if namespace.is_empty() {
-        name.clone()
-    } else {
-        format!("{}.{}", namespace, name)
-    };
+    let full_class_name = make_class_key(&namespace, &name);
 
     archive_fields(&mut class_box, class_ptr)?;
     archive_methods(&mut class_box, class_ptr, &full_class_name)?;
@@ -424,20 +495,8 @@ unsafe fn hydrate_class(class_ptr: *mut c_void) -> Result<Class, String> {
 
     let class_clone = (*class_box).clone();
 
-    CACHE.classes.insert(key, class_box);
-
-    let image = api::class_get_image(class_ptr);
-    if !image.is_null() {
-        let image_name_ptr = api::image_get_name(image);
-        if !image_name_ptr.is_null() {
-            let image_name = CStr::from_ptr(image_name_ptr)
-                .to_string_lossy()
-                .into_owned();
-            if let Some(assembly) = CACHE.assemblies.get_mut(&image_name) {
-                drop(assembly);
-            }
-        }
-    }
+    CACHE.classes.insert(cache_key.clone(), class_box);
+    CACHE.classes_by_ptr.insert(class_ptr as usize, cache_key);
 
     Ok(class_clone)
 }
@@ -451,6 +510,8 @@ unsafe fn hydrate_class(class_ptr: *mut c_void) -> Result<Class, String> {
 /// # Returns
 /// * `Result<(), String>` - Result indicating success
 unsafe fn archive_fields(class: &mut Class, class_ptr: *mut c_void) -> Result<(), String> {
+    class.fields.reserve(class.num_fields_count);
+
     let mut iter = ptr::null_mut();
     loop {
         let field_ptr = api::class_get_fields(class_ptr, &mut iter);
@@ -458,24 +519,15 @@ unsafe fn archive_fields(class: &mut Class, class_ptr: *mut c_void) -> Result<()
             break;
         }
 
-        let name_ptr = api::field_get_name(field_ptr);
-        let name = CStr::from_ptr(name_ptr).to_string_lossy().into_owned();
-
+        let name = cstr_lossy(api::field_get_name(field_ptr), "");
         let offset = api::field_get_offset(field_ptr);
         let type_ptr = api::field_get_type(field_ptr);
-
-        let type_name_ptr = api::type_get_name(type_ptr);
-        let type_name = if !type_ptr.is_null() {
-            CStr::from_ptr(type_name_ptr).to_string_lossy().into_owned()
-        } else {
-            "System.Object".to_string()
-        };
-
+        let type_name = type_name_or(type_ptr, "System.Object");
         let flags = api::field_get_flags(field_ptr);
 
         let field = Field {
             address: field_ptr,
-            name: name.to_string(),
+            name,
             type_info: Type {
                 address: type_ptr,
                 name: type_name,
@@ -528,24 +580,10 @@ unsafe fn archive_methods(
             break;
         }
 
-        let name_ptr = api::method_get_name(method_ptr);
-        let name = if !name_ptr.is_null() {
-            CStr::from_ptr(name_ptr).to_string_lossy().into_owned()
-        } else {
-            String::new()
-        };
-
+        let name = cstr_lossy(api::method_get_name(method_ptr), "");
         let flags = api::method_get_flags(method_ptr, ptr::null_mut());
         let return_type_ptr = api::method_get_return_type(method_ptr);
-        let return_type_name_ptr = api::type_get_name(return_type_ptr);
-        let return_type_name = if !return_type_name_ptr.is_null() {
-            CStr::from_ptr(return_type_name_ptr)
-                .to_string_lossy()
-                .into_owned()
-        } else {
-            String::new()
-        };
-
+        let return_type_name = type_name_or(return_type_ptr, "");
         let function_ptr = *(method_ptr as *const *mut c_void);
 
         let rva = if image_base > 0 && !function_ptr.is_null() {
@@ -554,6 +592,7 @@ unsafe fn archive_methods(
             0
         };
 
+        let param_count = api::method_get_param_count(method_ptr);
         let mut method = Method {
             address: method_ptr,
             token: api::method_get_token(method_ptr),
@@ -569,35 +608,19 @@ unsafe fn archive_methods(
             function: function_ptr,
             rva,
             va: function_ptr as u64,
-            args: Vec::new(),
+            args: Vec::with_capacity(param_count as usize),
             is_generic: api::method_is_generic(method_ptr),
             is_inflated: api::method_is_inflated(method_ptr),
             is_instance: api::method_is_instance(method_ptr),
-            param_count: api::method_get_param_count(method_ptr),
+            param_count,
             declaring_type: api::method_get_declaring_type(method_ptr),
             instance: None,
         };
 
-        let param_count = api::method_get_param_count(method_ptr);
         for i in 0..param_count {
-            let param_name_ptr = api::method_get_param_name(method_ptr, i as u32);
-            let param_name = if !param_name_ptr.is_null() {
-                CStr::from_ptr(param_name_ptr)
-                    .to_string_lossy()
-                    .into_owned()
-            } else {
-                String::new()
-            };
-
+            let param_name = cstr_lossy(api::method_get_param_name(method_ptr, i as u32), "");
             let param_type_ptr = api::method_get_param(method_ptr, i as u32);
-            let param_type_name_ptr = api::type_get_name(param_type_ptr);
-            let param_type_name = if !param_type_name_ptr.is_null() {
-                CStr::from_ptr(param_type_name_ptr)
-                    .to_string_lossy()
-                    .into_owned()
-            } else {
-                String::new()
-            };
+            let param_type_name = type_name_or(param_type_ptr, "");
 
             method.args.push(Arg {
                 name: param_name,
@@ -609,7 +632,7 @@ unsafe fn archive_methods(
             });
         }
 
-        let method_key = format!("{}::{}", full_class_name, name);
+        let method_key = method_cache_key(full_class_name, &method);
         CACHE.methods.insert(method_key, method.clone());
 
         class.methods.push(method);
@@ -623,9 +646,8 @@ unsafe fn archive_methods(
 /// # Arguments
 /// * `class` - Mutable reference to the Class struct
 fn archive_properties(class: &mut Class) {
-    use std::collections::HashMap;
-
-    let mut property_map: HashMap<String, (Option<Method>, Option<Method>)> = HashMap::new();
+    let mut property_map: FxHashMap<String, (Option<Method>, Option<Method>)> =
+        FxHashMap::default();
 
     for method in &class.methods {
         let is_getter = method.name.starts_with("get_") && method.args.is_empty();
@@ -666,24 +688,10 @@ pub fn method_from_ptr(method_ptr: *mut c_void) -> Option<Method> {
     }
 
     unsafe {
-        let name_ptr = api::method_get_name(method_ptr);
-        let name = if !name_ptr.is_null() {
-            CStr::from_ptr(name_ptr).to_string_lossy().into_owned()
-        } else {
-            String::new()
-        };
-
+        let name = cstr_lossy(api::method_get_name(method_ptr), "");
         let flags = api::method_get_flags(method_ptr, ptr::null_mut());
         let return_type_ptr = api::method_get_return_type(method_ptr);
-        let return_type_name_ptr = api::type_get_name(return_type_ptr);
-        let return_type_name = if !return_type_name_ptr.is_null() {
-            CStr::from_ptr(return_type_name_ptr)
-                .to_string_lossy()
-                .into_owned()
-        } else {
-            String::new()
-        };
-
+        let return_type_name = type_name_or(return_type_ptr, "");
         let function_ptr = *(method_ptr as *const *mut c_void);
 
         let image_base = image::get_image_base(
@@ -700,17 +708,16 @@ pub fn method_from_ptr(method_ptr: *mut c_void) -> Option<Method> {
         }
 
         let class_ptr = api::method_get_class(method_ptr);
-        let mut class_ref: Option<*const Class> = None;
-
-        if !class_ptr.is_null() {
-            for entry in CACHE.classes.iter() {
-                if entry.value().address == class_ptr {
-                    class_ref = Some(&**entry.value() as *const Class);
-                    break;
-                }
+        let class_ref = if class_ptr.is_null() {
+            None
+        } else {
+            if cached_class_ref_by_ptr(class_ptr).is_none() {
+                let _ = hydrate_class(class_ptr);
             }
-        }
+            cached_class_ref_by_ptr(class_ptr)
+        };
 
+        let param_count = api::method_get_param_count(method_ptr);
         let mut method = Method {
             address: method_ptr,
             token: api::method_get_token(method_ptr),
@@ -726,35 +733,19 @@ pub fn method_from_ptr(method_ptr: *mut c_void) -> Option<Method> {
             function: function_ptr,
             rva,
             va: function_ptr as u64,
-            args: Vec::new(),
+            args: Vec::with_capacity(param_count as usize),
             is_generic: api::method_is_generic(method_ptr),
             is_inflated: api::method_is_inflated(method_ptr),
             is_instance: api::method_is_instance(method_ptr),
-            param_count: api::method_get_param_count(method_ptr),
+            param_count,
             declaring_type: api::method_get_declaring_type(method_ptr),
             instance: None,
         };
 
-        let param_count = api::method_get_param_count(method_ptr);
         for i in 0..param_count {
-            let param_name_ptr = api::method_get_param_name(method_ptr, i as u32);
-            let param_name = if !param_name_ptr.is_null() {
-                CStr::from_ptr(param_name_ptr)
-                    .to_string_lossy()
-                    .into_owned()
-            } else {
-                String::new()
-            };
-
+            let param_name = cstr_lossy(api::method_get_param_name(method_ptr, i as u32), "");
             let param_type_ptr = api::method_get_param(method_ptr, i as u32);
-            let param_type_name_ptr = api::type_get_name(param_type_ptr);
-            let param_type_name = if !param_type_name_ptr.is_null() {
-                CStr::from_ptr(param_type_name_ptr)
-                    .to_string_lossy()
-                    .into_owned()
-            } else {
-                String::new()
-            };
+            let param_type_name = type_name_or(param_type_ptr, "");
 
             method.args.push(Arg {
                 name: param_name,
@@ -778,6 +769,10 @@ pub fn method_from_ptr(method_ptr: *mut c_void) -> Option<Method> {
 /// # Returns
 /// * `i32` - The size of the type in bytes
 unsafe fn get_type_size(type_ptr: *mut c_void) -> i32 {
+    if type_ptr.is_null() {
+        return 0;
+    }
+
     let class_ptr = api::class_from_type(type_ptr);
     if class_ptr.is_null() {
         return 0;

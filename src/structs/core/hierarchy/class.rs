@@ -110,7 +110,7 @@ impl MethodSelector for (&str, &[&str]) {
 
         for (i, param_name) in self.1.iter().enumerate() {
             let arg_type = &method.args[i].type_info;
-            if arg_type.name != *param_name && arg_type.cpp_name() != *param_name {
+            if !arg_type.matches_name(*param_name) {
                 return false;
             }
         }
@@ -397,18 +397,20 @@ impl Class {
 
         match method {
             Some(method) => unsafe {
-                let params = if method.args.len() == 2 {
-                    vec![type_object, &include_inactive as *const bool as *mut c_void]
+                let result = if method.args.len() == 2 {
+                    let params = [type_object, &include_inactive as *const bool as *mut c_void];
+                    method.call::<*mut Il2cppArray<Object>>(&params)
                 } else {
-                    vec![type_object]
+                    let params = [type_object];
+                    method.call::<*mut Il2cppArray<Object>>(&params)
                 };
 
-                match method.call::<*mut Il2cppArray<Object>>(&params) {
+                match result {
                     Ok(array) => {
                         if array.is_null() {
                             return Vec::new();
                         }
-                        (*array).to_vector().into_iter().collect()
+                        (*array).to_vector()
                     }
                     Err(_) => Vec::new(),
                 }

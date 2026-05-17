@@ -44,6 +44,22 @@ impl std::fmt::Display for Field {
 }
 
 impl Field {
+    #[inline]
+    fn checked_address(&self, base: *mut c_void) -> Result<usize, String> {
+        if base.is_null() {
+            return Err(format!("Field '{}' base pointer is null", self.name));
+        }
+        if self.offset < 0 {
+            return Err(format!(
+                "Field '{}' has invalid negative offset {}",
+                self.name, self.offset
+            ));
+        }
+        (base as usize)
+            .checked_add(self.offset as usize)
+            .ok_or_else(|| format!("Field '{}' address overflow", self.name))
+    }
+
     /// Generates a string representation of the field, including its value if static
     ///
     /// # Returns
@@ -95,7 +111,7 @@ impl Field {
                     return Err("Static field data is null".to_string());
                 }
 
-                let address = static_data as usize + self.offset as usize;
+                let address = self.checked_address(static_data)?;
 
                 let field_type = api::field_get_type(self.address);
                 let type_class = api::class_from_type(field_type);
@@ -129,12 +145,12 @@ impl Field {
                     return Err("Failed to resolve class from field type".to_string());
                 }
 
-                let address = instance as usize + self.offset as usize;
+                let address = self.checked_address(instance)?;
                 let vt = ValueType::from_ptr_with_class(address as *mut c_void, type_class);
                 return Ok(std::ptr::read(&vt as *const _ as *const T));
             }
 
-            let address = instance as usize + self.offset as usize;
+            let address = self.checked_address(instance)?;
             crate::memory::rw::read(address).map_err(|e| e.to_string())
         }
     }
@@ -155,7 +171,7 @@ impl Field {
                 )
             })?;
 
-            let address = instance as usize + self.offset as usize;
+            let address = self.checked_address(instance)?;
             crate::memory::rw::write(address, value).map_err(|e| e.to_string())
         }
     }

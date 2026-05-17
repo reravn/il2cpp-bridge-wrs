@@ -19,6 +19,25 @@ pub struct Il2cppList<T: Copy> {
 }
 
 impl<T: Copy> Il2cppList<T> {
+    /// Returns the logical list length, clamping invalid negative metadata to zero.
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.size.max(0) as usize
+    }
+
+    /// Returns true if this list has no logical elements.
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
+    #[inline]
+    fn bounded_len(&self) -> usize {
+        self.items_array()
+            .map(|arr| self.len().min(arr.max_length))
+            .unwrap_or(0)
+    }
+
     /// Gets the internal items array
     ///
     /// # Returns
@@ -51,10 +70,11 @@ impl<T: Copy> Il2cppList<T> {
     /// # Returns
     /// * `Option<T>` - The element if present and index is within bounds, otherwise None
     pub fn get(&self, index: usize) -> Option<T> {
-        if index >= self.size as usize {
+        if index >= self.len() {
             return None;
         }
-        self.items_array().map(|arr| arr.get(index))
+        self.items_array()
+            .and_then(|arr| (index < arr.max_length).then(|| arr.get(index)))
     }
 
     /// Alias for `get` that panics on out of bounds
@@ -80,10 +100,13 @@ impl<T: Copy> Il2cppList<T> {
     /// # Returns
     /// * `bool` - True if setting was successful, False if index out of bounds or array null
     pub fn set(&mut self, index: usize, value: T) -> bool {
-        if index >= self.size as usize {
+        if index >= self.len() {
             return false;
         }
         if let Some(arr) = self.items_array_mut() {
+            if index >= arr.max_length {
+                return false;
+            }
             arr.set(index, value);
             true
         } else {
@@ -96,13 +119,11 @@ impl<T: Copy> Il2cppList<T> {
     /// # Returns
     /// * `Vec<T>` - A new vector containing the list elements
     pub fn to_vec(&self) -> Vec<T> {
-        let mut result = Vec::with_capacity(self.size as usize);
-        for i in 0..self.size as usize {
-            if let Some(item) = self.get(i) {
-                result.push(item);
-            }
-        }
-        result
+        let Some(arr) = self.items_array() else {
+            return Vec::new();
+        };
+        let len = self.len().min(arr.max_length);
+        unsafe { std::slice::from_raw_parts(arr.get_pointer(), len).to_vec() }
     }
 
     /// Gets a pointer to the data array
@@ -118,6 +139,6 @@ impl<T: Copy> Il2cppList<T> {
     /// # Returns
     /// * `impl Iterator<Item = T> + '_` - An iterator yielding elements
     pub fn iter(&self) -> impl Iterator<Item = T> + '_ {
-        (0..self.size as usize).filter_map(|i| self.get(i))
+        (0..self.bounded_len()).filter_map(|i| self.get(i))
     }
 }

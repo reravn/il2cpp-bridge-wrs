@@ -91,20 +91,21 @@ where
                     promote_library_to_global(target);
                 }
 
-                match api::load(|symbol| match resolve_symbol(symbol) {
+                if let Err(missing) = api::load(|symbol| match resolve_symbol(symbol) {
                     Ok(addr) => addr as *mut c_void,
                     Err(e) => {
                         logger::error(&format!("{}", e));
                         std::ptr::null_mut()
                     }
                 }) {
-                    Ok(_) => {}
-                    Err(missing) => {
-                        logger::error(&format!(
-                            "Failed to load IL2CPP API symbols: {}",
-                            missing.join(", ")
-                        ));
-                    }
+                    logger::error(&format!(
+                        "Failed to load IL2CPP API symbols: {}",
+                        missing.join(", ")
+                    ));
+
+                    let mut guard = STATE.lock().unwrap();
+                    *guard = State::Idle;
+                    return;
                 }
 
                 logger::info("IL2CPP API loaded, waiting for cache initialization...");
