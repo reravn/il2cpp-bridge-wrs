@@ -169,7 +169,7 @@ mod platform {
         unsafe {
             // Null handle returns the calling process module, similar to RTLD_DEFAULT on Unix.
             let handle = GetModuleHandleA(std::ptr::null());
-            if handle == 0 {
+            if handle.is_null() {
                 return Err(SymbolError::NotFound(symbol.into()));
             }
             let addr = GetProcAddress(handle, c_str.as_ptr() as *const u8);

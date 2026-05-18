@@ -143,7 +143,7 @@ mod platform {
         let c_name = CString::new(name).ok()?;
         unsafe {
             let handle = GetModuleHandleA(c_name.as_ptr() as *const u8);
-            if handle == 0 {
+            if handle.is_null() {
                 None
             } else {
                 Some(handle as usize)
