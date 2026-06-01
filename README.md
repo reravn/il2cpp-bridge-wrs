@@ -7,7 +7,7 @@ Built for native plugins, injected libraries, and tooling that already lives ins
 ## Install
 
 ```bash
-cargo add --git il2cpp-bridge-rs
+cargo add --git https://github.com/reravn/il2cpp-bridge-wrs
 ```
 
 ## Quick look
