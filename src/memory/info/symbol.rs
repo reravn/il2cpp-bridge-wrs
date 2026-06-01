@@ -161,23 +161,18 @@ mod platform {
 #[cfg(target_os = "windows")]
 mod platform {
     use super::SymbolError;
-    use std::ffi::CString;
-    use windows_sys::Win32::System::LibraryLoader::{GetModuleHandleA, GetProcAddress};
+    use wraith::navigation::ModuleQuery;
+    use wraith::Peb;
 
     pub fn raw_resolve(symbol: &str) -> Result<usize, SymbolError> {
-        let c_str = CString::new(symbol).map_err(|_| SymbolError::StringError)?;
-        unsafe {
-            // Null handle returns the calling process module, similar to RTLD_DEFAULT on Unix.
-            let handle = GetModuleHandleA(std::ptr::null());
-            if handle.is_null() {
-                return Err(SymbolError::NotFound(symbol.into()));
-            }
-            let addr = GetProcAddress(handle, c_str.as_ptr() as *const u8);
-            match addr {
-                Some(f) => Ok(f as usize),
-                None => Err(SymbolError::NotFound(symbol.into())),
-            }
-        }
+        let err = || SymbolError::NotFound(symbol.into());
+        let peb = Peb::current().map_err(|_| err())?;
+        let module = ModuleQuery::new(&peb).current_module().map_err(|_| err())?;
+
+        module
+            .get_export(symbol)
+            .map(|f| f as usize)
+            .ok_or_else(err)
     }
 
     pub fn ensure_global_visibility(_library_name: &str) {}

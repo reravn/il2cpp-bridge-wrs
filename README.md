@@ -1,7 +1,4 @@
-# il2cpp-bridge-rs
-
-<a href="https://crates.io/crates/il2cpp-bridge-rs"><img src="https://img.shields.io/crates/v/il2cpp-bridge-rs?style=for-the-badge" alt="Crates.io"></a>
-<a href="#supported-targets"><img src="https://img.shields.io/badge/platform-iOS%20%C2%B7%20macOS%20%C2%B7%20Linux%20%C2%B7%20Android%20%C2%B7%20Windows-222?style=for-the-badge&logoColor=white" alt="Platform"></a>
+# il2cpp-bridge-rs (fork with wraith-rs usage)
 
 Poke at Unity's IL2CPP runtime from Rust. Resolve classes, call methods, dump metadata, grab Unity objects — without the usual pointer soup.
 
@@ -10,7 +7,7 @@ Built for native plugins, injected libraries, and tooling that already lives ins
 ## Install
 
 ```bash
-cargo add il2cpp-bridge-rs
+cargo add --git il2cpp-bridge-rs
 ```
 
 ## Quick look

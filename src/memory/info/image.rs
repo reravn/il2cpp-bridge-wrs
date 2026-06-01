@@ -136,19 +136,13 @@ mod platform {
 // Windows: use GetModuleHandleA to retrieve the base address of a loaded module by name.
 #[cfg(target_os = "windows")]
 mod platform {
-    use std::ffi::CString;
-    use windows_sys::Win32::System::LibraryLoader::GetModuleHandleA;
+    use wraith::navigation::ModuleQuery;
+    use wraith::Peb;
 
     pub fn find_image_base(name: &str) -> Option<usize> {
-        let c_name = CString::new(name).ok()?;
-        unsafe {
-            let handle = GetModuleHandleA(c_name.as_ptr() as *const u8);
-            if handle.is_null() {
-                None
-            } else {
-                Some(handle as usize)
-            }
-        }
+        let peb = Peb::current().ok()?;
+        let module = ModuleQuery::new(&peb).find_by_name(name).ok()?;
+        Some(module.base())
     }
 
     pub fn find_image_path(_name: &str) -> Option<String> {
