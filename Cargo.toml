@@ -31,7 +31,7 @@ oslog = "0.2"
 env_logger = { version = "0.11", default-features = false, features = ["auto-color"] }
 
 [target.'cfg(windows)'.dependencies]
-windows-sys = { version = "0.61.2", features = ["Win32_System_LibraryLoader"] }
+wraith-rs = "0.1.8"
 
 [profile.release]
 opt-level = 3
