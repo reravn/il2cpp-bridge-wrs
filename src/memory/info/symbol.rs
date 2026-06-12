@@ -147,12 +147,29 @@ mod platform {
     pub fn raw_resolve(symbol: &str) -> Result<usize, SymbolError> {
         let c_str = CString::new(symbol).map_err(|_| SymbolError::StringError)?;
         unsafe {
+            // Try RTLD_DEFAULT first (works when the library was loaded with GLOBAL)
             let addr_ptr = libc::dlsym(libc::RTLD_DEFAULT, c_str.as_ptr());
-            if addr_ptr.is_null() {
-                Err(SymbolError::NotFound(symbol.into()))
-            } else {
-                Ok(addr_ptr as usize)
+            if !addr_ptr.is_null() {
+                return Ok(addr_ptr as usize);
             }
+            // Fallback: Android 14+ linker may refuse to promote LOCAL symbols
+            // even with RTLD_GLOBAL|RTLD_NOLOAD. Resolve via the target image's
+            // own handle instead (handle intentionally not dlclose'd — the library
+            // stays loaded for the process lifetime, so the symbol pointer remains valid).
+            if let Some(target) = crate::init::TARGET_IMAGE_NAME.get() {
+                let c_name = match CString::new(target.as_str()) {
+                    Ok(c) => c,
+                    Err(_) => return Err(SymbolError::NotFound(symbol.into())),
+                };
+                let handle = libc::dlopen(c_name.as_ptr(), libc::RTLD_NOLOAD);
+                if !handle.is_null() {
+                    let addr = libc::dlsym(handle, c_str.as_ptr());
+                    if !addr.is_null() {
+                        return Ok(addr as usize);
+                    }
+                }
+            }
+            Err(SymbolError::NotFound(symbol.into()))
         }
     }
 }
